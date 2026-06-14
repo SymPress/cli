@@ -1,0 +1,17 @@
+name: QA
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    uses: sympress/workflows/.github/workflows/sympress-qa.yml@v1
+    with:
+      php_version: '8.5'
