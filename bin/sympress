@@ -1,0 +1,67 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use SymPress\Cli\Command\CreateProjectCommand;
+use SymPress\Cli\Command\UpdateProjectCommand;
+use Symfony\Component\Console\Application;
+
+$autoloadCandidates = [
+    __DIR__ . '/../vendor/autoload.php',
+    __DIR__ . '/../../../vendor/autoload.php',
+    __DIR__ . '/../../../autoload.php',
+];
+
+$autoload = null;
+
+foreach ($autoloadCandidates as $candidate) {
+    if (is_readable($candidate)) {
+        $autoload = $candidate;
+        break;
+    }
+}
+
+if ($autoload === null) {
+    fwrite(STDERR, "Composer autoload file not found. Run composer install first.\n");
+    exit(1);
+}
+
+require_once $autoload;
+
+if (!class_exists(CreateProjectCommand::class)) {
+    spl_autoload_register(static function (string $class): void {
+        $prefix = 'SymPress\\Cli\\';
+
+        if (!str_starts_with($class, $prefix)) {
+            return;
+        }
+
+        $relativeClass = substr($class, strlen($prefix));
+        $path = __DIR__ . '/../src/' . str_replace('\\', '/', $relativeClass) . '.php';
+
+        if (is_readable($path)) {
+            require_once $path;
+        }
+    });
+}
+
+$application = new Application('SymPress CLI', '0.1.0');
+$commands = [
+    new CreateProjectCommand(),
+    new UpdateProjectCommand(),
+];
+
+if (method_exists($application, 'addCommand')) {
+    foreach ($commands as $command) {
+        $application->addCommand($command);
+    }
+} else {
+    foreach ($commands as $command) {
+        $application->add($command);
+    }
+}
+
+$application->setDefaultCommand('project:create', false);
+
+exit($application->run());
