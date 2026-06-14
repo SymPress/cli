@@ -1,0 +1,63 @@
+{
+    "name": "sympress/cli",
+    "description": "Standalone Symfony Console CLI for creating configured SymPress projects from starter templates.",
+    "type": "library",
+    "license": "GPL-2.0-or-later",
+    "authors": [
+        {
+            "name": "Brian Schaffner",
+            "email": "brian.schaeffner@sympress.de",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.5",
+        "ext-json": "*",
+        "symfony/console": "^8.0",
+        "symfony/filesystem": "^8.0",
+        "symfony/process": "^8.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.5",
+        "squizlabs/php_codesniffer": "^3.13"
+    },
+    "autoload": {
+        "psr-4": {
+            "SymPress\\Cli\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "SymPress\\Cli\\Tests\\": "tests/"
+        }
+    },
+    "bin": [
+        "bin/sympress"
+    ],
+    "scripts": {
+        "cs": [
+            "Composer\\Config::disableProcessTimeout",
+            "phpcs --standard=phpcs.xml.dist"
+        ],
+        "cs:fix": [
+            "Composer\\Config::disableProcessTimeout",
+            "phpcbf --standard=phpcs.xml.dist"
+        ],
+        "tests": [
+            "Composer\\Config::disableProcessTimeout",
+            "phpunit --configuration phpunit.xml.dist --no-coverage"
+        ],
+        "test": [
+            "@tests"
+        ],
+        "qa": [
+            "@cs",
+            "@tests"
+        ]
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    },
+    "prefer-stable": true
+}
