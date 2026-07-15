@@ -20,6 +20,7 @@ final readonly class RepositoryManifest
         public array $profiles = [],
         public array $packageSuggestions = [],
         public ?string $source = null,
+        public int $schemaVersion = 1,
     ) {
     }
 

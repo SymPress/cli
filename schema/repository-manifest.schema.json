@@ -1,0 +1,92 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://raw.githubusercontent.com/sympress/cli/main/schema/repository-manifest.schema.json",
+    "title": "SymPress CLI repository manifest",
+    "type": "object",
+    "properties": {
+        "$schema": {
+            "type": "string"
+        },
+        "schemaVersion": {
+            "const": 1
+        },
+        "templates": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/template"
+            }
+        },
+        "profiles": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/profile"
+            }
+        },
+        "packageSuggestions": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/packageSuggestion"
+            }
+        }
+    },
+    "required": [
+        "schemaVersion"
+    ],
+    "additionalProperties": false,
+    "$defs": {
+        "nonEmptyString": {
+            "type": "string",
+            "minLength": 1
+        },
+        "stringList": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/nonEmptyString"
+            },
+            "uniqueItems": true
+        },
+        "template": {
+            "type": "object",
+            "properties": {
+                "id": { "$ref": "#/$defs/nonEmptyString" },
+                "label": { "$ref": "#/$defs/nonEmptyString" },
+                "packageName": { "$ref": "#/$defs/nonEmptyString" },
+                "repositoryUrl": { "$ref": "#/$defs/nonEmptyString" },
+                "description": { "$ref": "#/$defs/nonEmptyString" },
+                "defaultVersion": { "$ref": "#/$defs/nonEmptyString" },
+                "setupCommand": {
+                    "$ref": "#/$defs/stringList",
+                    "minItems": 1
+                }
+            },
+            "required": ["id", "packageName", "repositoryUrl"],
+            "additionalProperties": false
+        },
+        "profile": {
+            "type": "object",
+            "properties": {
+                "id": { "$ref": "#/$defs/nonEmptyString" },
+                "label": { "$ref": "#/$defs/nonEmptyString" },
+                "description": { "$ref": "#/$defs/nonEmptyString" },
+                "exampleName": { "$ref": "#/$defs/nonEmptyString" }
+            },
+            "required": ["id"],
+            "additionalProperties": false
+        },
+        "packageSuggestion": {
+            "type": "object",
+            "properties": {
+                "name": { "$ref": "#/$defs/nonEmptyString" },
+                "label": { "$ref": "#/$defs/nonEmptyString" },
+                "description": { "$ref": "#/$defs/nonEmptyString" },
+                "constraint": { "$ref": "#/$defs/nonEmptyString" },
+                "dev": { "type": "boolean" },
+                "recommendedProfiles": { "$ref": "#/$defs/stringList" },
+                "optionalProfiles": { "$ref": "#/$defs/stringList" },
+                "repositoryUrl": { "$ref": "#/$defs/nonEmptyString" }
+            },
+            "required": ["name"],
+            "additionalProperties": false
+        }
+    }
+}

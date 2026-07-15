@@ -52,14 +52,8 @@ $commands = [
     new UpdateProjectCommand(),
 ];
 
-if (method_exists($application, 'addCommand')) {
-    foreach ($commands as $command) {
-        $application->addCommand($command);
-    }
-} else {
-    foreach ($commands as $command) {
-        $application->add($command);
-    }
+foreach ($commands as $command) {
+    $application->addCommand($command);
 }
 
 $application->setDefaultCommand('project:create', false);

@@ -34,13 +34,6 @@ final class DefaultPackageCatalog
                 recommendedProfiles: ['website', 'app', 'commerce'],
             ),
             new PackageSuggestion(
-                name: 'sympress/consent',
-                label: 'Consent',
-                description: 'Consent storage and hooks for privacy-sensitive WordPress sites.',
-                recommendedProfiles: ['website', 'commerce'],
-                optionalProfiles: ['app'],
-            ),
-            new PackageSuggestion(
                 name: 'sympress/event-dispatcher',
                 label: 'Event Dispatcher',
                 description: 'PSR/Symfony event boundaries for app and service workflows.',
@@ -51,8 +44,10 @@ final class DefaultPackageCatalog
                 name: 'sympress/mailer',
                 label: 'Mailer',
                 description: 'Mail transport and templating integration for transactional messages.',
+                constraint: 'dev-main',
                 recommendedProfiles: ['app', 'microservice', 'commerce'],
                 optionalProfiles: ['website'],
+                repositoryUrl: 'https://github.com/SymPress/mailer',
             ),
             new PackageSuggestion(
                 name: 'sympress/migration',
@@ -64,7 +59,9 @@ final class DefaultPackageCatalog
                 name: 'sympress/nginx-cache',
                 label: 'Nginx Cache',
                 description: 'Cache-aware WordPress integration for nginx-backed environments.',
+                constraint: 'dev-main',
                 recommendedProfiles: ['website', 'commerce'],
+                repositoryUrl: 'https://github.com/SymPress/nginx-cache',
             ),
             new PackageSuggestion(
                 name: 'sympress/orm',

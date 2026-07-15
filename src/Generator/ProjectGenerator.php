@@ -42,7 +42,11 @@ final readonly class ProjectGenerator
         }
 
         $io->section('Apply initial configuration');
-        $this->composerJsonEditor->apply($configuration->directory, $configuration);
+        $composerChanged = $this->composerJsonEditor->apply($configuration->directory, $configuration);
+        if ($composerChanged) {
+            $this->filesystem->remove($configuration->directory . '/composer.lock');
+        }
+
         $this->envFileEditor->apply($configuration->directory, $configuration);
         $this->metadataStore->write(
             $configuration->directory,

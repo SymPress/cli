@@ -83,7 +83,7 @@ final readonly class RepositoryManifestLoader
      */
     private function candidateUrls(string $source, string $ref): array
     {
-        if (preg_match('#^https?://#', $source) !== 1) {
+        if (preg_match('#^https://#', $source) !== 1) {
             return [];
         }
 
@@ -93,7 +93,7 @@ final readonly class RepositoryManifestLoader
 
         if (
             preg_match(
-                '#^https?://github\.com/(?P<owner>[^/]+)/(?P<repo>[^/#?]+)#',
+                '~^https://github\.com/(?P<owner>[^/]+)/(?P<repo>[^/#?]+)~',
                 $source,
                 $matches,
             ) !== 1

@@ -23,7 +23,21 @@ final class DefaultPackageCatalogTest extends TestCase
         );
 
         self::assertContains('sympress/assets', $runtime);
+        self::assertNotContains('sympress/consent', $runtime);
         self::assertContains('sympress/profiler', $dev);
+    }
+
+    public function testUnpublishedPublicRecommendationsIncludeInstallMetadata(): void
+    {
+        $catalog = new DefaultPackageCatalog();
+
+        foreach (['sympress/mailer', 'sympress/nginx-cache'] as $package) {
+            $reference = $catalog->referenceFor($package);
+
+            self::assertSame('dev-main', $reference->constraint);
+            self::assertSame('https://github.com/SymPress/' . substr($package, 9), $reference->repositoryUrl);
+            self::assertTrue($reference->suggested);
+        }
     }
 
     public function testExplicitConstraintWinsOverCatalogDefault(): void

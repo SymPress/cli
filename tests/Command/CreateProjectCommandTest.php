@@ -15,6 +15,7 @@ final class CreateProjectCommandTest extends TestCase
         $directory = $this->temporaryDirectory();
         $manifest = $directory . '/sympress-cli.json';
         file_put_contents($manifest, json_encode([
+            'schemaVersion' => 1,
             'templates' => [
                 [
                     'id' => 'sympress-starter',

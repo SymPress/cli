@@ -14,6 +14,7 @@ final readonly class PackageReference
         public string $name,
         public string $constraint = '*',
         public ?string $repositoryUrl = null,
+        public bool $suggested = false,
     ) {
         if (preg_match(self::NAME_PATTERN, $name) !== 1) {
             throw new InvalidArgumentException(sprintf('"%s" is not a valid Composer package name.', $name));

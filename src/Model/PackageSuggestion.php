@@ -34,6 +34,6 @@ final readonly class PackageSuggestion
 
     public function toReference(): PackageReference
     {
-        return new PackageReference($this->name, $this->constraint, $this->repositoryUrl);
+        return new PackageReference($this->name, $this->constraint, $this->repositoryUrl, suggested: true);
     }
 }

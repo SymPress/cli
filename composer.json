@@ -18,6 +18,7 @@
         "symfony/process": "^8.0"
     },
     "require-dev": {
+        "phpstan/phpstan": "^2.2",
         "phpunit/phpunit": "^11.5",
         "squizlabs/php_codesniffer": "^3.13"
     },
@@ -43,6 +44,10 @@
             "Composer\\Config::disableProcessTimeout",
             "phpcbf --standard=phpcs.xml.dist"
         ],
+        "static-analysis": [
+            "Composer\\Config::disableProcessTimeout",
+            "phpstan analyse --memory-limit=1G --no-progress"
+        ],
         "tests": [
             "Composer\\Config::disableProcessTimeout",
             "phpunit --configuration phpunit.xml.dist --no-coverage"
@@ -52,6 +57,7 @@
         ],
         "qa": [
             "@cs",
+            "@static-analysis",
             "@tests"
         ]
     },

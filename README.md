@@ -200,6 +200,8 @@ Example:
 
 ```json
 {
+  "$schema": "https://raw.githubusercontent.com/sympress/cli/main/schema/repository-manifest.schema.json",
+  "schemaVersion": 1,
   "templates": [
     {
       "id": "sympress-starter",
@@ -236,6 +238,16 @@ Example:
   ]
 }
 ```
+
+The canonical format is defined by
+[`schema/repository-manifest.schema.json`](schema/repository-manifest.schema.json).
+Malformed entries fail as a whole instead of being silently ignored.
+
+A remote manifest is trusted executable input because `setupCommand` is run as
+an argv array after project creation. Remote loading requires HTTPS. Pin
+`--manifest-ref` to a reviewed tag or commit for reproducible automation. Use
+`--no-setup` to inspect generated files before running a repository-provided
+setup command.
 
 ## Extending
 
