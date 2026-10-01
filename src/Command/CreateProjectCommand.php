@@ -93,7 +93,18 @@ final class CreateProjectCommand extends Command
                 InputOption::VALUE_REQUIRED,
                 'Manifest file, URL or GitHub repository to load template metadata from.',
             )
-            ->addOption('manifest-ref', null, InputOption::VALUE_REQUIRED, 'Git ref used for remote manifests.', 'main')
+            ->addOption(
+                'manifest-ref',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Explicit immutable Git SHA for an independent manifest.'
+            )
+            ->addOption(
+                'allow-template-execution',
+                null,
+                InputOption::VALUE_NONE,
+                'Trust the selected repository revision and its setup commands.'
+            )
             ->addOption(
                 'no-remote-manifest',
                 null,

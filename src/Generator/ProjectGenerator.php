@@ -32,15 +32,69 @@ final readonly class ProjectGenerator
         }
 
         $this->assertTargetDirectoryIsAvailable($configuration->directory);
-        $this->filesystem->mkdir(dirname($configuration->directory));
 
-        $io->section('Create starter project');
-        $exitCode = $this->commandRunner->run($this->createProjectCommand($configuration), null, $io);
+        $repository = $configuration->templateRepository ?: $configuration->template->repositoryUrl;
+        $revision = $configuration->templateRevision
+            ?? (new \SymPress\Cli\Repository\TemplateRevision())->resolve(
+                $repository,
+                $configuration->templateVersion ?: $configuration->template->defaultVersion
+            );
+        if ($configuration->runSetup && !$configuration->allowTemplateExecution) {
+            throw new RuntimeException(
+                'Setup requires --allow-template-execution to trust the selected revision and its commands.',
+            );
+        }
+        if (preg_match('/^[a-f0-9]{40}$/iD', $revision) !== 1) {
+            throw new RuntimeException('The template revision must be an immutable Git SHA.');
+        }
+        $this->filesystem->mkdir(dirname($configuration->directory));
+        $io->section('Create starter project at ' . $revision);
+        $exitCode = $this->commandRunner->run(
+            ['git',
+            '-c',
+            'core.hooksPath=/dev/null',
+            'clone',
+            '--no-checkout',
+            '--',
+            $repository,
+            $configuration->directory],
+            null,
+            $io
+        );
 
         if ($exitCode !== 0) {
             return $exitCode;
         }
 
+        $exitCode = $this->commandRunner->run(
+            ['git',
+            '-c',
+            'core.hooksPath=/dev/null',
+            'checkout',
+            '--detach',
+            $revision],
+            $configuration->directory,
+            $io
+        );
+        if ($exitCode !== 0) {
+            return $exitCode;
+        }
+        $manifest = (new \SymPress\Cli\Repository\RepositoryManifestLoader())->load($configuration->directory);
+        $setupTemplate = $configuration->template;
+        foreach ($manifest->templates ?? [] as $candidate) {
+            if ($candidate->id !== $setupTemplate->id) {
+                continue;
+            }
+            if (
+                $candidate->repositoryUrl !== $setupTemplate->repositoryUrl
+                || $candidate->packageName !== $setupTemplate->packageName
+                || $candidate->defaultVersion !== $setupTemplate->defaultVersion
+            ) {
+                throw new RuntimeException('Snapshot manifest cannot redirect the selected template.');
+            }
+            $setupTemplate = $candidate;
+        }
+        $this->filesystem->remove($configuration->directory . '/.git');
         $io->section('Apply initial configuration');
         $composerChanged = $this->composerJsonEditor->apply($configuration->directory, $configuration);
         if ($composerChanged) {
@@ -50,13 +104,13 @@ final readonly class ProjectGenerator
         $this->envFileEditor->apply($configuration->directory, $configuration);
         $this->metadataStore->write(
             $configuration->directory,
-            ProjectMetadata::fromConfiguration($configuration),
+            ProjectMetadata::fromConfiguration($configuration, $revision),
         );
 
         if ($configuration->runSetup) {
             $io->section('Run starter setup');
             $exitCode = $this->commandRunner->run(
-                $configuration->template->setupCommandFor($configuration),
+                $setupTemplate->setupCommandFor($configuration),
                 $configuration->directory,
                 $io,
             );
@@ -70,7 +124,7 @@ final readonly class ProjectGenerator
         $io->definitionList(
             ['Project URL' => $configuration->wpHome()],
             ['Admin user' => $configuration->wpAdminUsername],
-            ['Admin password' => $configuration->wpAdminPassword],
+            ['Admin credential' => 'Stored privately in .env'],
         );
 
         if (!$configuration->runSetup) {
@@ -84,37 +138,13 @@ final readonly class ProjectGenerator
         return 0;
     }
 
-    /**
-     * @return list<string>
-     */
-    private function createProjectCommand(ProjectConfiguration $configuration): array
-    {
-        $command = [
-            $configuration->composerBinary,
-            'create-project',
-            $configuration->template->packageSpec($configuration->templateVersion),
-            $configuration->directory,
-            '--no-install',
-        ];
-
-        if ($configuration->templateRepository !== null && $configuration->templateRepository !== '') {
-            $command[] = '--repository=' . json_encode(
-                [
-                    'type' => 'vcs',
-                    'url' => $configuration->templateRepository,
-                ],
-                JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR,
-            );
-        }
-
-        return $command;
-    }
-
     private function renderPlan(ProjectConfiguration $configuration, SymfonyStyle $io): void
     {
         $io->title('SymPress CLI dry run');
         $io->definitionList(
             ['Template' => $configuration->template->label],
+            ['Package' => $configuration->template->packageSpec($configuration->templateVersion)],
+            ['Template revision' => $configuration->templateRevision ?? 'Resolve selected ref before execution'],
             ['Project type' => $configuration->profile->label],
             ['Directory' => $configuration->directory],
             ['Composer name' => $configuration->composerPackageName],
@@ -122,7 +152,11 @@ final readonly class ProjectGenerator
             ['Run setup' => $configuration->runSetup ? 'yes' : 'no'],
         );
         $io->listing([
-            $this->formatCommand($this->createProjectCommand($configuration)),
+            $this->formatCommand(['git', '-c', 'core.hooksPath=/dev/null', 'clone', '--no-checkout', '--',
+                $configuration->templateRepository ?: $configuration->template->repositoryUrl,
+                $configuration->directory]),
+            $this->formatCommand(['git', '-c', 'core.hooksPath=/dev/null', 'checkout', '--detach',
+                $configuration->templateRevision ?? '<resolved immutable SHA>']),
             'patch composer.json',
             'write .env',
             'write ' . ProjectMetadataStore::RELATIVE_PATH,

@@ -24,10 +24,11 @@ final readonly class ProjectMetadata
         public string $templateVersion,
         public string $updatedAt,
         public int $schemaVersion = self::SCHEMA_VERSION,
+        public ?string $templateRevision = null,
     ) {
     }
 
-    public static function fromConfiguration(ProjectConfiguration $configuration): self
+    public static function fromConfiguration(ProjectConfiguration $configuration, ?string $revision = null): self
     {
         return new self(
             projectName: $configuration->projectName,
@@ -40,6 +41,7 @@ final readonly class ProjectMetadata
             templateRepositoryUrl: $configuration->templateRepository ?: $configuration->template->repositoryUrl,
             templateVersion: $configuration->templateVersion ?: $configuration->template->defaultVersion,
             updatedAt: gmdate('c'),
+            templateRevision: $revision ?? $configuration->templateRevision,
         );
     }
 
@@ -60,6 +62,7 @@ final readonly class ProjectMetadata
             templateVersion: self::string($data, 'templateVersion', '1.0.x-dev'),
             updatedAt: self::string($data, 'updatedAt'),
             schemaVersion: (int) ($data['schemaVersion'] ?? self::SCHEMA_VERSION),
+            templateRevision: self::string($data, 'templateRevision') ?: null,
         );
     }
 
@@ -68,7 +71,12 @@ final readonly class ProjectMetadata
         TemplateDefinition $template,
         ?string $templateRepository = null,
         ?string $templateVersion = null,
+        ?string $templateRevision = null,
     ): self {
+        $repository = $templateRepository ?: $template->repositoryUrl;
+        $version = $templateVersion ?: $template->defaultVersion;
+        $preservedRevision = $repository === $this->templateRepositoryUrl && $version === $this->templateVersion
+            && $template->id === $this->templateId ? $this->templateRevision : null;
         return new self(
             projectName: $this->projectName,
             projectSlug: $this->projectSlug,
@@ -81,6 +89,7 @@ final readonly class ProjectMetadata
             templateVersion: $templateVersion ?: $template->defaultVersion,
             updatedAt: gmdate('c'),
             schemaVersion: $this->schemaVersion,
+            templateRevision: $templateRevision ?? $preservedRevision,
         );
     }
 
@@ -100,6 +109,7 @@ final readonly class ProjectMetadata
             'templatePackageName' => $this->templatePackageName,
             'templateRepositoryUrl' => $this->templateRepositoryUrl,
             'templateVersion' => $this->templateVersion,
+            'templateRevision' => $this->templateRevision,
             'updatedAt' => $this->updatedAt,
         ];
     }

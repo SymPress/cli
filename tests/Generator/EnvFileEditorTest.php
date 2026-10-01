@@ -33,9 +33,32 @@ final class EnvFileEditorTest extends TestCase
 
         $env = (string) file_get_contents($projectDir . '/.env');
 
-        self::assertStringContainsString('WP_HOME=https://acme-website.ddev.site', $env);
+        self::assertStringContainsString('WP_HOME="https://acme-website.ddev.site"', $env);
         self::assertStringContainsString('WP_SITEURL=${WP_HOME}/wp', $env);
-        self::assertStringContainsString('WP_ADMIN_PASSWORD=secret-secret', $env);
+        self::assertStringContainsString('WP_ADMIN_PASSWORD="secret-secret"', $env);
+    }
+
+    public function testValuesRoundTripThroughRealDotenvParserAndFileIsPrivate(): void
+    {
+        $directory = $this->temporaryDirectory();
+        $secret = " space # hash $ dollar ' apostrophe \" quote \\ slash\nnewline\rreturn Ä ";
+        $configuration = new ProjectConfiguration(
+            template: (new DefaultTemplateCatalog())->first(),
+            profile: (new DefaultProfileCatalog())->default(),
+            directory: $directory,
+            projectName: 'Test',
+            projectSlug: 'test',
+            composerPackageName: 'acme/test',
+            ddevTld: 'ddev.site',
+            wpAdminUsername: $secret,
+            wpAdminPassword: $secret,
+        );
+        (new EnvFileEditor())->apply($directory, $configuration);
+        $values = (new \Symfony\Component\Dotenv\Dotenv())->parse((string) file_get_contents($directory . '/.env'));
+        self::assertSame($secret, $values['WP_ADMIN_PASSWORD']);
+        self::assertSame($secret, $values['WP_ADMIN_USERNAME']);
+        self::assertSame('https://test.ddev.site/wp', $values['WP_SITEURL']);
+        self::assertSame(0600, fileperms($directory . '/.env') & 0777);
     }
 
     private function temporaryDirectory(): string

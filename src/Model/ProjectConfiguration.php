@@ -27,6 +27,8 @@ final readonly class ProjectConfiguration
         public string $composerBinary = 'composer',
         public ?string $templateVersion = null,
         public ?string $templateRepository = null,
+        public ?string $templateRevision = null,
+        public bool $allowTemplateExecution = false,
     ) {
     }
 

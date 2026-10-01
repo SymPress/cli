@@ -93,11 +93,13 @@ sympress new shop-platform \
 Use a repository-provided manifest:
 
 ```bash
-sympress new my-site --manifest=https://github.com/SymPress/starter
+sympress new my-site --template-version=<reviewed-tag-or-SHA> --allow-template-execution
 ```
 
 The CLI also tries to discover a manifest in the selected template repository by
-default. Use `--no-remote-manifest` for offline or fully pinned runs.
+default, from the same resolved immutable Git SHA used to materialize the template.
+Use --no-remote-manifest with an explicit local/offline catalog when discovery
+is unnecessary; creation still resolves a non-SHA selected version before download.
 
 ## Update A Project
 
@@ -130,14 +132,17 @@ By default the update command patches `composer.json`, updates
 
 ## What It Does
 
-1. Runs `composer create-project sympress/starter <dir> --no-install`.
+1. Resolves the selected version/ref once to an immutable Git SHA, clones without
+   checkout and checks out that SHA detached with Git hooks disabled. Composer
+   installation, root scripts and plugins are not executed during materialization.
 2. Writes project metadata and selected package suggestions to `composer.json`.
 3. Creates `.env` from `.env.example` and fills first-run values:
    `WP_HOME`, `WP_SITEURL`, `WP_ADMIN_USERNAME`, `WP_ADMIN_PASSWORD`,
    `DDEV_PROJECT_NAME` and `DDEV_PROJECT_TLD`.
 4. Writes `.sympress/project.json` so future update runs know the project type,
-   starter template and repository.
-5. Runs the starter setup command, unless `--no-setup` is passed.
+   starter template, repository and actual immutable template SHA.
+5. Runs the setup command from the checked-out manifest only when --allow-template-execution
+   explicitly authorizes it. --no-setup and dry-run never execute setup.
 
 ## Project Types
 
@@ -166,8 +171,9 @@ sympress project:create [directory] [options]
 - `--template-version=1.0.x-dev`
 - `--manifest=./sympress-cli.json`
 - `--manifest=https://github.com/SymPress/starter`
-- `--manifest-ref=main`
+- `--manifest-ref=<40-character-Git-SHA>`
 - `--no-remote-manifest`
+- `--allow-template-execution`
 - `--no-setup`
 - `--dry-run`
 
@@ -179,7 +185,7 @@ Update options:
 - `--repository=https://github.com/SymPress/starter`
 - `--template-version=1.0.x-dev`
 - `--manifest=./sympress-cli.json`
-- `--manifest-ref=main`
+- `--manifest-ref=<40-character-Git-SHA>`
 - `--no-remote-manifest`
 - `--no-install`
 - `--dry-run`
@@ -243,11 +249,26 @@ The canonical format is defined by
 [`schema/repository-manifest.schema.json`](schema/repository-manifest.schema.json).
 Malformed entries fail as a whole instead of being silently ignored.
 
-A remote manifest is trusted executable input because `setupCommand` is run as
-an argv array after project creation. Remote loading requires HTTPS. Pin
-`--manifest-ref` to a reviewed tag or commit for reproducible automation. Use
-`--no-setup` to inspect generated files before running a repository-provided
-setup command.
+Repository manifests are read from the same selected immutable SHA as template
+files; there is no fallback to main. A snapshot manifest cannot redirect the
+already selected package/repository/default ref. Explicit raw HTTPS JSON URLs and
+local files are independent catalogs with their own provenance; remote Git
+catalogs require a 40-character --manifest-ref. Materialization still inspects the
+checked-out manifest before setup.
+
+--allow-template-execution authorizes setup commands and all executable behavior
+those commands invoke (including Composer scripts/plugins). Review the repository,
+SHA and argv before using it. Without the flag, setup refuses before cloning;
+--no-setup can be used to inspect the source first. No shell is used and command
+failures propagate. The initial Git clone/checkout stage disables Git hooks and
+does not run Composer. A created project records the immutable SHA; update
+catalog loading follows the selected target SHA, and changing source/version
+invalidates the previous recorded identity.
+
+Dotenv literal values round-trip comments, dollars, quotes, backslashes, Unicode
+and whitespace. Only WP_SITEURL intentionally expands ${WP_HOME}/wp. The .env
+file is created/written with mode 0600. Completion and dry-run output never print
+an admin password; the credential is stored privately in .env.
 
 ## Extending
 
