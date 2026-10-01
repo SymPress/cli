@@ -39,6 +39,7 @@ final readonly class ProjectUpdater
         ?string $targetTemplate = null,
         ?string $templateRepository = null,
         ?string $templateVersion = null,
+        ?string $templateRevision = null,
     ): ProjectUpdatePlan {
         $level = $this->normalizeLevel($level);
         $targetType ??= $metadata->profileId;
@@ -69,6 +70,7 @@ final readonly class ProjectUpdater
             $template,
             $nextTemplateRepository,
             $nextTemplateVersion,
+            $templateRevision,
         );
         $runtimePackages = $this->references($packages->recommendedForProfile($profile->id, false));
         $devPackages = $this->references($packages->recommendedForProfile($profile->id, true));

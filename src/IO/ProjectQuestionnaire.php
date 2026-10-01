@@ -60,7 +60,17 @@ final readonly class ProjectQuestionnaire
 
         $template = $this->selectTemplate($input, $io, $interactive, $templates);
         $templateRepository = $this->emptyToNull($input->getOption('repository')) ?: $template->repositoryUrl;
-        $remoteManifest = $this->loadRemoteManifest($input, $templateRepository);
+        $version = $this->emptyToNull($input->getOption('template-version')) ?: $template->defaultVersion;
+        $revision = null;
+        if (
+            !(bool) $input->getOption('no-remote-manifest')
+            && (!is_dir($templateRepository)
+            || is_dir($templateRepository . '/.git')
+            || is_file($templateRepository . '/HEAD'))
+        ) {
+            $revision = (new \SymPress\Cli\Repository\TemplateRevision())->resolve($templateRepository, $version);
+        }
+        $remoteManifest = $this->loadRemoteManifest($input, $templateRepository, $revision);
 
         if ($remoteManifest !== null) {
             [$templates, $profiles, $packages] = $this->applyManifest(
@@ -69,7 +79,15 @@ final readonly class ProjectQuestionnaire
                 $profiles,
                 $packages,
             );
-            $template = $templates->get($template->id);
+            $updatedTemplate = $templates->get($template->id);
+            if (
+                $updatedTemplate->repositoryUrl !== $template->repositoryUrl
+                || $updatedTemplate->defaultVersion !== $template->defaultVersion
+                || $updatedTemplate->packageName !== $template->packageName
+            ) {
+                throw new \RuntimeException('A manifest cannot redirect the selected template repository or version.');
+            }
+            $template = $updatedTemplate;
 
             if ($this->emptyToNull($input->getOption('repository')) === null) {
                 $templateRepository = $template->repositoryUrl;
@@ -109,6 +127,8 @@ final readonly class ProjectQuestionnaire
             composerBinary: (string) $input->getOption('composer-bin'),
             templateVersion: $this->emptyToNull($input->getOption('template-version')),
             templateRepository: $templateRepository,
+            templateRevision: $revision,
+            allowTemplateExecution: (bool) $input->getOption('allow-template-execution'),
         );
     }
 
@@ -123,13 +143,16 @@ final readonly class ProjectQuestionnaire
         return $this->manifestLoader->loadRequired($source, $this->manifestRef($input));
     }
 
-    private function loadRemoteManifest(InputInterface $input, string $repositoryUrl): ?RepositoryManifest
-    {
+    private function loadRemoteManifest(
+        InputInterface $input,
+        string $repositoryUrl,
+        ?string $revision
+    ): ?RepositoryManifest {
         if ((bool) $input->getOption('no-remote-manifest')) {
             return null;
         }
 
-        return $this->manifestLoader->loadFromRepository($repositoryUrl, $this->manifestRef($input));
+        return $this->manifestLoader->loadFromRepository($repositoryUrl, $revision ?? '');
     }
 
     /**
@@ -154,7 +177,7 @@ final readonly class ProjectQuestionnaire
 
     private function manifestRef(InputInterface $input): string
     {
-        return $this->emptyToNull($input->getOption('manifest-ref')) ?: 'main';
+        return $this->emptyToNull($input->getOption('manifest-ref')) ?: '';
     }
 
     private function selectTemplate(

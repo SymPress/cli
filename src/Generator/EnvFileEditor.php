@@ -20,14 +20,20 @@ final readonly class EnvFileEditor
         $envFile = $projectDir . '/.env';
         $envExample = $projectDir . '/.env.example';
 
-        if (!is_file($envFile)) {
-            if (is_file($envExample)) {
-                $this->filesystem->copy($envExample, $envFile);
-            } else {
-                $this->filesystem->dumpFile($envFile, '');
+        $previous = umask(0077);
+        try {
+            if (!is_file($envFile)) {
+                if (is_file($envExample)) {
+                    $this->filesystem->copy($envExample, $envFile);
+                } else {
+                    $this->filesystem->dumpFile($envFile, '');
+                }
             }
-        }
 
+            chmod($envFile, 0600);
+        } finally {
+            umask($previous);
+        }
         $this->update($envFile, [
             'DDEV_PROJECT_NAME' => $configuration->projectSlug,
             'DDEV_PROJECT_TLD' => $configuration->ddevTld,
@@ -54,7 +60,7 @@ final readonly class EnvFileEditor
         foreach ($lines as $index => $line) {
             foreach ($values as $key => $value) {
                 if (str_starts_with((string) $line, $key . '=')) {
-                    $lines[$index] = $key . '=' . $value;
+                    $lines[$index] = $key . '=' . ($key === 'WP_SITEURL' ? $value : $this->quote($value));
                     $seen[$key] = true;
                 }
             }
@@ -62,10 +68,21 @@ final readonly class EnvFileEditor
 
         foreach ($values as $key => $value) {
             if (!isset($seen[$key])) {
-                $lines[] = $key . '=' . $value;
+                $lines[] = $key . '=' . ($key === 'WP_SITEURL' ? $value : $this->quote($value));
             }
         }
 
-        $this->filesystem->dumpFile($envFile, implode("\n", $lines) . "\n");
+        $previous = umask(0077);
+        try {
+            $this->filesystem->dumpFile($envFile, implode("\n", $lines) . "\n");
+            chmod($envFile, 0600);
+        } finally {
+            umask($previous);
+        }
+    }
+
+    private function quote(string $value): string
+    {
+        return '"' . str_replace(['\\', '"', '$', "\r", "\n"], ['\\\\', '\\"', '\\$', '\\r', '\\n'], $value) . '"';
     }
 }

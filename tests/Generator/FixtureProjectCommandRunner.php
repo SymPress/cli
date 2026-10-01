@@ -10,6 +10,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 final class FixtureProjectCommandRunner implements CommandRunner
 {
     public ?bool $lockPresentDuringSetup = null;
+    public int $calls = 0;
 
     /** @param array<string, mixed> $composer */
     public function __construct(
@@ -19,15 +20,19 @@ final class FixtureProjectCommandRunner implements CommandRunner
 
     public function run(array $command, ?string $cwd, OutputInterface $output): int
     {
+        ++$this->calls;
         unset($output);
 
+        if ($cwd !== null && $command[0] === 'git') {
+            return 0;
+        }
         if ($cwd !== null) {
             $this->lockPresentDuringSetup = is_file($cwd . '/composer.lock');
 
             return 0;
         }
 
-        $projectDir = $command[3];
+        $projectDir = $command[count($command) - 1];
         mkdir($projectDir, 0777, true);
         file_put_contents(
             $projectDir . '/composer.json',

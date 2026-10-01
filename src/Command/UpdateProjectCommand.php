@@ -53,7 +53,7 @@ final class UpdateProjectCommand extends Command
                 InputOption::VALUE_REQUIRED,
                 'Manifest file, URL or GitHub repository to load template metadata from.',
             )
-            ->addOption('manifest-ref', null, InputOption::VALUE_REQUIRED, 'Git ref used for remote manifests.', 'main')
+            ->addOption('manifest-ref', null, InputOption::VALUE_REQUIRED, 'Immutable Git SHA for remote manifests.')
             ->addOption(
                 'no-remote-manifest',
                 null,
@@ -82,7 +82,7 @@ HELP);
         try {
             $projectDir = $this->projectDir($input, getcwd() ?: '.');
             $metadata = $this->metadataStore->read($projectDir);
-            [$templates, $profiles, $packages] = $this->catalogs($input, $metadata);
+            [$templates, $profiles, $packages, $revision] = $this->catalogs($input, $metadata);
             $level = $this->level($input, $io);
             $targetType = $this->targetType($input, $io, $level, $metadata, $profiles);
             $targetTemplate = $this->targetTemplate($input, $level, $metadata);
@@ -99,6 +99,7 @@ HELP);
                 $targetTemplate,
                 $templateRepository,
                 $templateVersion,
+                $revision,
             );
 
             return $this->updater->apply(
@@ -137,7 +138,7 @@ HELP);
     }
 
     /**
-     * @return array{0: DefaultTemplateCatalog, 1: DefaultProfileCatalog, 2: DefaultPackageCatalog}
+     * @return array{0: DefaultTemplateCatalog, 1: DefaultProfileCatalog, 2: DefaultPackageCatalog, 3: string|null}
      */
     private function catalogs(InputInterface $input, ProjectMetadata $metadata): array
     {
@@ -156,19 +157,31 @@ HELP);
         }
 
         if ((bool) $input->getOption('no-remote-manifest')) {
-            return [$templates, $profiles, $packages];
+            return [$templates, $profiles, $packages, null];
         }
-
-        $remoteManifest = $this->manifestLoader->loadFromRepository(
-            $metadata->templateRepositoryUrl,
-            $this->manifestRef($input),
-        );
-
+        $selected = $templates->get($this->stringOption($input, 'template') ?? $metadata->templateId);
+        $changed = $selected->id !== $metadata->templateId;
+        $repository = $this->stringOption($input, 'repository')
+            ?? ($changed ? $selected->repositoryUrl : $metadata->templateRepositoryUrl);
+        $version = $this->stringOption($input, 'template-version')
+            ?? ($changed ? $selected->defaultVersion : $metadata->templateVersion);
+        $revision = $repository === $metadata->templateRepositoryUrl && $version === $metadata->templateVersion
+            ? $metadata->templateRevision : null;
+        $revision ??= (new \SymPress\Cli\Repository\TemplateRevision())->resolve($repository, $version);
+        $remoteManifest = $this->manifestLoader->loadFromRepository($repository, $revision);
         if ($remoteManifest === null) {
-            return [$templates, $profiles, $packages];
+            return [$templates, $profiles, $packages, $revision];
         }
-
-        return $this->applyManifest($remoteManifest, $templates, $profiles, $packages);
+        foreach ($remoteManifest->templates as $candidate) {
+            if (
+                $candidate->id === $selected->id && ($candidate->repositoryUrl !== $selected->repositoryUrl
+                || $candidate->packageName !== $selected->packageName
+                || $candidate->defaultVersion !== $selected->defaultVersion)
+            ) {
+                throw new RuntimeException('Snapshot manifest cannot redirect the selected template.');
+            }
+        }
+        return [...$this->applyManifest($remoteManifest, $templates, $profiles, $packages), $revision];
     }
 
     private function level(InputInterface $input, SymfonyStyle $io): string
@@ -250,7 +263,7 @@ HELP);
 
     private function manifestRef(InputInterface $input): string
     {
-        return $this->stringOption($input, 'manifest-ref') ?: 'main';
+        return $this->stringOption($input, 'manifest-ref') ?: '';
     }
 
     private function stringOption(InputInterface $input, string $name): ?string

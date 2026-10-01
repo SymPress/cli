@@ -62,6 +62,23 @@ final class ProjectGeneratorTest extends TestCase
         self::assertFileExists($projectDir . '/composer.lock');
     }
 
+    public function testSetupRequiresExplicitTrustBeforeAnyCommandOrProjectMutation(): void
+    {
+        $directory = $this->temporaryProjectPath();
+        $runner = new FixtureProjectCommandRunner($this->starterComposer());
+        try {
+            (new ProjectGenerator($runner))->generate(
+                $this->configuration($directory, runSetup: true, allowExecution: false),
+                $this->style(),
+            );
+            self::fail('Untrusted setup accepted.');
+        } catch (\RuntimeException $exception) {
+            self::assertStringContainsString('--allow-template-execution', $exception->getMessage());
+        }
+        self::assertSame(0, $runner->calls);
+        self::assertDirectoryDoesNotExist($directory);
+    }
+
     /** @return array<string, mixed> */
     private function starterComposer(): array
     {
@@ -79,6 +96,7 @@ final class ProjectGeneratorTest extends TestCase
         string $projectDir,
         array $packages = [],
         bool $runSetup = false,
+        bool $allowExecution = true,
     ): ProjectConfiguration {
         return new ProjectConfiguration(
             template: (new DefaultTemplateCatalog())->first(),
@@ -92,6 +110,8 @@ final class ProjectGeneratorTest extends TestCase
             wpAdminPassword: 'secret-secret',
             packages: $packages,
             runSetup: $runSetup,
+            allowTemplateExecution: $allowExecution,
+            templateRevision: str_repeat('a', 40),
         );
     }
 

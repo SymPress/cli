@@ -22,7 +22,7 @@ final readonly class RepositoryManifestLoader
     ) {
     }
 
-    public function loadRequired(string $source, string $ref = 'main'): RepositoryManifest
+    public function loadRequired(string $source, string $ref = ''): RepositoryManifest
     {
         $manifest = $this->load($source, $ref);
 
@@ -33,7 +33,7 @@ final readonly class RepositoryManifestLoader
         return $manifest;
     }
 
-    public function load(string $source, string $ref = 'main'): ?RepositoryManifest
+    public function load(string $source, string $ref = ''): ?RepositoryManifest
     {
         $source = trim($source);
 
@@ -42,6 +42,20 @@ final readonly class RepositoryManifestLoader
         }
 
         if (is_dir($source)) {
+            if (preg_match('/^[a-f0-9]{40}$/D', $ref) === 1) {
+                foreach (self::MANIFEST_PATHS as $path) {
+                    $process = new \Symfony\Component\Process\Process(['git',
+                        '-C',
+                        $source,
+                        'show',
+                        $ref . ':' . $path]);
+                    $process->setEnv(['GIT_DIR' => false, 'GIT_WORK_TREE' => false, 'GIT_INDEX_FILE' => false]);
+                    if ($process->run() === 0) {
+                        return $this->parser->parse($process->getOutput(), $source . '@' . $ref . ':' . $path);
+                    }
+                }
+                return null;
+            }
             return $this->loadFromDirectory($source);
         }
 
@@ -49,6 +63,9 @@ final readonly class RepositoryManifestLoader
             return $this->parser->parse((string) file_get_contents($source), $source);
         }
 
+        if (!str_ends_with($source, '.json') && preg_match('/^[a-f0-9]{40}$/D', $ref) !== 1) {
+            throw new RuntimeException('Remote repository manifests require an explicit immutable Git SHA.');
+        }
         foreach ($this->candidateUrls($source, $ref) as $url) {
             $json = $this->readUrl($url);
 
@@ -60,7 +77,7 @@ final readonly class RepositoryManifestLoader
         return null;
     }
 
-    public function loadFromRepository(string $repositoryUrl, string $ref = 'main'): ?RepositoryManifest
+    public function loadFromRepository(string $repositoryUrl, string $ref = ''): ?RepositoryManifest
     {
         return $this->load($repositoryUrl, $ref);
     }
