@@ -25,7 +25,7 @@ final class DefaultTemplateCatalog
                 label: 'SymPress Starter',
                 packageName: 'sympress/starter',
                 repositoryUrl: 'https://github.com/SymPress/starter',
-                description: 'WordPress website starter with DDEV, WPStarter, SymPress kernel, WP-CLI'
+                description: 'WordPress website starter with DDEV, SymPress Runtime, SymPress kernel, WP-CLI'
                     . ' and quality tooling.',
             ),
         ];
