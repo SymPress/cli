@@ -38,7 +38,7 @@ final readonly class EnvFileEditor
             'DDEV_PROJECT_NAME' => $configuration->projectSlug,
             'DDEV_PROJECT_TLD' => $configuration->ddevTld,
             'WP_HOME' => $configuration->wpHome(),
-            'WP_SITEURL' => '${WP_HOME}/wp',
+            'WP_SITEURL' => '${WP_HOME}',
             'WP_ADMIN_USERNAME' => $configuration->wpAdminUsername,
             'WP_ADMIN_PASSWORD' => $configuration->wpAdminPassword,
         ]);
@@ -59,7 +59,12 @@ final readonly class EnvFileEditor
 
         foreach ($lines as $index => $line) {
             foreach ($values as $key => $value) {
-                if (str_starts_with((string) $line, $key . '=')) {
+                if (preg_match('/^(?:export\s+)?' . preg_quote($key, '/') . '\s*=/', trim((string) $line)) === 1) {
+                    if ($key === 'WP_SITEURL') {
+                        // The selected template owns its WordPress root/subdirectory layout.
+                        $seen[$key] = true;
+                        continue;
+                    }
                     $lines[$index] = $key . '=' . ($key === 'WP_SITEURL' ? $value : $this->quote($value));
                     $seen[$key] = true;
                 }
