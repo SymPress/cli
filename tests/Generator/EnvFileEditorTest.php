@@ -34,7 +34,7 @@ final class EnvFileEditorTest extends TestCase
         $env = (string) file_get_contents($projectDir . '/.env');
 
         self::assertStringContainsString('WP_HOME="https://acme-website.ddev.site"', $env);
-        self::assertStringContainsString('WP_SITEURL=${WP_HOME}/wp', $env);
+        self::assertStringContainsString('WP_SITEURL=${WP_HOME}' . "\n", $env);
         self::assertStringContainsString('WP_ADMIN_PASSWORD="secret-secret"', $env);
     }
 
@@ -57,8 +57,39 @@ final class EnvFileEditorTest extends TestCase
         $values = (new \Symfony\Component\Dotenv\Dotenv())->parse((string) file_get_contents($directory . '/.env'));
         self::assertSame($secret, $values['WP_ADMIN_PASSWORD']);
         self::assertSame($secret, $values['WP_ADMIN_USERNAME']);
-        self::assertSame('https://test.ddev.site/wp', $values['WP_SITEURL']);
+        self::assertSame('https://test.ddev.site', $values['WP_SITEURL']);
         self::assertSame(0600, fileperms($directory . '/.env') & 0777);
+    }
+
+    public function testSelectedTemplateRootAndSubdirectorySiteUrlExpressionsArePreserved(): void
+    {
+        $expressions = [
+            'WP_SITEURL=${WP_HOME}',
+            'WP_SITEURL=${WP_HOME}/wp',
+            'export WP_SITEURL = "${WP_HOME}/core"',
+        ];
+        foreach ($expressions as $expression) {
+            $directory = $this->temporaryDirectory();
+            file_put_contents(
+                $directory . '/.env.example',
+                'WP_HOME=https://example.test' . "\n" . $expression . "\n",
+            );
+            $configuration = new ProjectConfiguration(
+                template: (new DefaultTemplateCatalog())->first(),
+                profile: (new DefaultProfileCatalog())->default(),
+                directory: $directory,
+                projectName: 'Test',
+                projectSlug: 'test',
+                composerPackageName: 'acme/test',
+                ddevTld: 'ddev.site',
+                wpAdminUsername: 'test',
+                wpAdminPassword: 'private-test',
+            );
+            (new EnvFileEditor())->apply($directory, $configuration);
+            $contents = (string) file_get_contents($directory . '/.env');
+            self::assertStringContainsString($expression . "\n", $contents);
+            self::assertSame(1, substr_count($contents, 'WP_SITEURL'));
+        }
     }
 
     private function temporaryDirectory(): string
