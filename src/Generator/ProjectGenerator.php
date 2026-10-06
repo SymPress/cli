@@ -88,11 +88,10 @@ final readonly class ProjectGenerator
             if (
                 $candidate->repositoryUrl !== $setupTemplate->repositoryUrl
                 || $candidate->packageName !== $setupTemplate->packageName
-                || $candidate->defaultVersion !== $setupTemplate->defaultVersion
             ) {
                 throw new RuntimeException('Snapshot manifest cannot redirect the selected template.');
             }
-            $setupTemplate = $candidate;
+            $setupTemplate = $candidate->withVersion($configuration->templateVersion ?: $setupTemplate->defaultVersion);
         }
         $this->filesystem->remove($configuration->directory . '/.git');
         $io->section('Apply initial configuration');

@@ -168,7 +168,7 @@ sympress project:create [directory] [options]
 - `--dev-package=vendor/name[:constraint]`
 - `--no-suggested-packages`
 - `--repository=https://github.com/SymPress/starter`
-- `--template-version=1.0.x-dev`
+- `--template-version=1.1.8`
 - `--manifest=./sympress-cli.json`
 - `--manifest=https://github.com/SymPress/starter`
 - `--manifest-ref=<40-character-Git-SHA>`
@@ -183,7 +183,7 @@ Update options:
 - `--type=website|app|microservice|commerce`
 - `--template=sympress-starter`
 - `--repository=https://github.com/SymPress/starter`
-- `--template-version=1.0.x-dev`
+- `--template-version=1.1.8`
 - `--manifest=./sympress-cli.json`
 - `--manifest-ref=<40-character-Git-SHA>`
 - `--no-remote-manifest`
@@ -202,6 +202,11 @@ When the starter changes, update this manifest in the starter repository. The CL
 will pick it up on the next run, so setup commands, project types and package
 suggestions can evolve with the repository instead of being hardcoded in the CLI.
 
+New projects default to the stable Starter 1.1.8 tag. An explicitly selected
+version and its verified commit remain fixed even when the catalog at that commit
+advertises a different default. Repository and Composer package identities must
+still match before any project is materialized.
+
 Example:
 
 ```json
@@ -215,7 +220,7 @@ Example:
       "packageName": "sympress/starter",
       "repositoryUrl": "https://github.com/SymPress/starter",
       "description": "DDEV-ready SymPress WordPress starter.",
-      "defaultVersion": "1.0.x-dev",
+      "defaultVersion": "1.1.8",
       "setupCommand": ["bin/console", "setup", "{project_slug}"]
     }
   ],

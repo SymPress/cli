@@ -175,13 +175,14 @@ HELP);
         foreach ($remoteManifest->templates as $candidate) {
             if (
                 $candidate->id === $selected->id && ($candidate->repositoryUrl !== $selected->repositoryUrl
-                || $candidate->packageName !== $selected->packageName
-                || $candidate->defaultVersion !== $selected->defaultVersion)
+                || $candidate->packageName !== $selected->packageName)
             ) {
                 throw new RuntimeException('Snapshot manifest cannot redirect the selected template.');
             }
         }
-        return [...$this->applyManifest($remoteManifest, $templates, $profiles, $packages), $revision];
+        [$templates, $profiles, $packages] = $this->applyManifest($remoteManifest, $templates, $profiles, $packages);
+        $templates = $templates->withTemplates([$templates->get($selected->id)->withVersion($version)]);
+        return [$templates, $profiles, $packages, $revision];
     }
 
     private function level(InputInterface $input, SymfonyStyle $io): string
