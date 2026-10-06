@@ -82,12 +82,13 @@ final readonly class ProjectQuestionnaire
             $updatedTemplate = $templates->get($template->id);
             if (
                 $updatedTemplate->repositoryUrl !== $template->repositoryUrl
-                || $updatedTemplate->defaultVersion !== $template->defaultVersion
                 || $updatedTemplate->packageName !== $template->packageName
             ) {
                 throw new \RuntimeException('A manifest cannot redirect the selected template repository or version.');
             }
-            $template = $updatedTemplate;
+            // Catalog metadata may advertise a different default. The version
+            // already resolved to a SHA remains the user's selected version.
+            $template = $updatedTemplate->withVersion($version);
 
             if ($this->emptyToNull($input->getOption('repository')) === null) {
                 $templateRepository = $template->repositoryUrl;
@@ -125,7 +126,7 @@ final readonly class ProjectQuestionnaire
             runSetup: $this->runSetup($input, $io, $interactive),
             dryRun: (bool) $input->getOption('dry-run'),
             composerBinary: (string) $input->getOption('composer-bin'),
-            templateVersion: $this->emptyToNull($input->getOption('template-version')),
+            templateVersion: $version,
             templateRepository: $templateRepository,
             templateRevision: $revision,
             allowTemplateExecution: (bool) $input->getOption('allow-template-execution'),

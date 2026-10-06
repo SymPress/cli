@@ -15,9 +15,22 @@ final readonly class TemplateDefinition
         public string $packageName,
         public string $repositoryUrl,
         public string $description,
-        public string $defaultVersion = '1.0.x-dev',
+        public string $defaultVersion = '1.1.8',
         public array $setupCommand = ['bin/console', 'setup', '{project_slug}'],
     ) {
+    }
+
+    public function withVersion(string $version): self
+    {
+        return new self(
+            $this->id,
+            $this->label,
+            $this->packageName,
+            $this->repositoryUrl,
+            $this->description,
+            $version,
+            $this->setupCommand,
+        );
     }
 
     public function packageSpec(?string $version = null): string
