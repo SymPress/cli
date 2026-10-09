@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2 — 2026-10-09
+
+- Require Symfony Process 8.0.5 or newer to exclude CVE-2026-24739 from consumer dependency resolution.
+
 ## 0.1.1 — 2026-10-06
 
 - Use stable Starter 1.1.8 for new projects instead of the removed development branch.
