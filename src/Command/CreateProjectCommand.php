@@ -9,11 +9,14 @@ use RuntimeException;
 use SymPress\Cli\Catalog\DefaultPackageCatalog;
 use SymPress\Cli\Catalog\DefaultProfileCatalog;
 use SymPress\Cli\Catalog\DefaultTemplateCatalog;
+use SymPress\Cli\Completion\DirectoryCompletion;
 use SymPress\Cli\Generator\ProjectGenerator;
 use SymPress\Cli\IO\ProjectQuestionnaire;
 use SymPress\Cli\Util\ProjectNameNormalizer;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Completion\CompletionInput;
+use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -131,6 +134,13 @@ but for a complete project:
 Interactive mode shows examples, explains package suggestions and writes the
 selected defaults into composer.json and .env before the starter setup runs.
 HELP);
+    }
+
+    public function complete(CompletionInput $input, CompletionSuggestions $suggestions): void
+    {
+        if ($input->mustSuggestArgumentValuesFor('directory')) {
+            DirectoryCompletion::suggest($suggestions);
+        }
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int

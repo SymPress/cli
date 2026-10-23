@@ -305,3 +305,34 @@ guidelines are provided by the SymPress `.github` repository.
 ## License
 
 GPL-2.0-or-later. See [LICENSE](LICENSE).
+
+## Directory completion
+
+With Symfony Console 8.2, `project:create` and `project:update` (including their
+aliases) ask the shell to complete the `directory` argument using the native
+`suggestDirectories()` API. Files are not suggested for this argument. Options
+such as `--template` and `--manifest` retain their existing completion behavior.
+Console 8.0 and 8.1 remain supported and do not request native path suggestions.
+SymPress does not enumerate filesystem entries or provide a replacement completer.
+
+Regenerate your completion script after upgrading Console to 8.2. Its completion
+protocol API 2 adds `:directories`/`:paths`; an installed API 1 script ignores
+these suggestions. The supported shells are Bash, Fish and Zsh:
+
+```sh
+# Bash (requires the bash-completion package to be loaded)
+sympress completion bash > ~/.sympress-completion.bash
+source ~/.sympress-completion.bash
+
+# Fish
+mkdir -p ~/.config/fish/completions
+sympress completion fish > ~/.config/fish/completions/sympress.fish
+
+# Zsh: add ~/.zfunc to fpath before running compinit in ~/.zshrc
+mkdir -p ~/.zfunc
+sympress completion zsh > ~/.zfunc/_sympress
+```
+
+Symfony 8.2 is still under development as of 2026-10-23. This integration is
+prepared for qualification; publication is held until the stable component and
+its final shell scripts have been rechecked.
