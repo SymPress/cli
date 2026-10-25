@@ -18,17 +18,21 @@ final class TemplateRevision
         if (!is_string($ref) || $ref === '' || str_starts_with($ref, '-') || str_contains($ref, "\0")) {
             throw new RuntimeException('Template version must identify an explicit Git ref.');
         }
-        $process = new Process(['git',
-            'ls-remote',
-            '--',
-            $repository,
-            'refs/heads/' . $ref,
-            'refs/tags/' . $ref,
-            'refs/tags/' . $ref . '^{}',
-            'refs/tags/v' . $ref,
-            'refs/tags/v' . $ref . '^{}']);
-        $process->setWorkingDirectory(sys_get_temp_dir());
-        $process->setEnv(['GIT_DIR' => false, 'GIT_WORK_TREE' => false, 'GIT_INDEX_FILE' => false]);
+        $process = new Process(
+            [
+                'git',
+                'ls-remote',
+                '--',
+                $repository,
+                'refs/heads/' . $ref,
+                'refs/tags/' . $ref,
+                'refs/tags/' . $ref . '^{}',
+                'refs/tags/v' . $ref,
+                'refs/tags/v' . $ref . '^{}',
+            ],
+            cwd: sys_get_temp_dir(),
+            env: ['GIT_DIR' => false, 'GIT_WORK_TREE' => false, 'GIT_INDEX_FILE' => false],
+        );
         $process->mustRun();
         $matches = [];
         preg_match_all('/^([a-f0-9]{40})\s+([^\r\n]+)$/m', $process->getOutput(), $matches, PREG_SET_ORDER);

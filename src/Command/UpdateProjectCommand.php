@@ -9,6 +9,7 @@ use RuntimeException;
 use SymPress\Cli\Catalog\DefaultPackageCatalog;
 use SymPress\Cli\Catalog\DefaultProfileCatalog;
 use SymPress\Cli\Catalog\DefaultTemplateCatalog;
+use SymPress\Cli\Completion\DirectoryCompletion;
 use SymPress\Cli\Project\ProjectMetadata;
 use SymPress\Cli\Project\ProjectMetadataStore;
 use SymPress\Cli\Repository\RepositoryManifest;
@@ -16,6 +17,8 @@ use SymPress\Cli\Repository\RepositoryManifestLoader;
 use SymPress\Cli\Update\ProjectUpdater;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Completion\CompletionInput;
+use Symfony\Component\Console\Completion\CompletionSuggestions;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -73,6 +76,13 @@ Run this inside a project created by the SymPress CLI:
 Patch keeps the current project type, minor allows type changes and major allows
 template/repository changes as well.
 HELP);
+    }
+
+    public function complete(CompletionInput $input, CompletionSuggestions $suggestions): void
+    {
+        if ($input->mustSuggestArgumentValuesFor('directory')) {
+            DirectoryCompletion::suggest($suggestions);
+        }
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int

@@ -44,12 +44,16 @@ final readonly class RepositoryManifestLoader
         if (is_dir($source)) {
             if (preg_match('/^[a-f0-9]{40}$/D', $ref) === 1) {
                 foreach (self::MANIFEST_PATHS as $path) {
-                    $process = new \Symfony\Component\Process\Process(['git',
-                        '-C',
-                        $source,
-                        'show',
-                        $ref . ':' . $path]);
-                    $process->setEnv(['GIT_DIR' => false, 'GIT_WORK_TREE' => false, 'GIT_INDEX_FILE' => false]);
+                    $process = new \Symfony\Component\Process\Process(
+                        [
+                            'git',
+                            '-C',
+                            $source,
+                            'show',
+                            $ref . ':' . $path,
+                        ],
+                        env: ['GIT_DIR' => false, 'GIT_WORK_TREE' => false, 'GIT_INDEX_FILE' => false],
+                    );
                     if ($process->run() === 0) {
                         return $this->parser->parse($process->getOutput(), $source . '@' . $ref . ':' . $path);
                     }
