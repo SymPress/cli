@@ -333,6 +333,5 @@ mkdir -p ~/.zfunc
 sympress completion zsh > ~/.zfunc/_sympress
 ```
 
-Symfony 8.2 is still under development as of 2026-10-23. This integration is
-prepared for qualification; publication is held until the stable component and
-its final shell scripts have been rechecked.
+The feature is detected at runtime. With Console 8.0 or 8.1 the commands behave
+exactly as before; it becomes active once Console 8.2 is installed.
