@@ -14,7 +14,7 @@
         "php": "^8.5",
         "ext-json": "*",
         "symfony/console": "^8.0",
-        "symfony/filesystem": "^8.0",
+        "symfony/filesystem": "^8.1.11",
         "symfony/process": "^8.0.5"
     },
     "require-dev": {
