@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.4 — 2026-11-06
+
+- Use the Symfony 8.1.11 security patches released on November 4.
+
 ## 0.1.3 — 2026-10-25
 
 - Complete the `directory` argument of `project:create` and `project:update` (and their aliases) with the native Symfony Console 8.2 directory suggestions. Files are not suggested, and Console 8.0 and 8.1 behave as before.
