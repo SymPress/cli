@@ -2,6 +2,7 @@
 
 ## 0.2.0 — 2026-11-15
 
+- Security: check out starter templates with `core.symlinks=false`. A malicious template could previously use symlinks such as `.env -> ../.bash_aliases` to make `project:create` write outside the project directory, even with `--no-setup`.
 - Add `sympress agents:md`: copies the `docs/` folders of the installed SymPress packages, at the commits in `composer.lock`, into `.sympress-docs/` and indexes them in `AGENTS.md` or `CLAUDE.md` for coding agents.
 
 ## 0.1.4 — 2026-11-06
