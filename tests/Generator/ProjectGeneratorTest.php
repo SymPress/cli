@@ -14,6 +14,7 @@ use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Process\Process;
 
 final class ProjectGeneratorTest extends TestCase
 {
@@ -79,6 +80,40 @@ final class ProjectGeneratorTest extends TestCase
         self::assertDirectoryDoesNotExist($directory);
     }
 
+    public function testTemplateSymlinksCannotRedirectWritesOutsideTheProject(): void
+    {
+        $projectDir = $this->temporaryProjectPath();
+        $root = dirname($projectDir);
+        $repository = $root . '/template';
+        $victim = $root . '/victim';
+        mkdir($repository);
+        $git = static function (array $arguments) use ($repository): string {
+            $process = new Process(['git', '-C', $repository, ...$arguments]);
+            $process->setEnv(['GIT_DIR' => false, 'GIT_WORK_TREE' => false, 'GIT_INDEX_FILE' => false]);
+            $process->mustRun();
+
+            return trim($process->getOutput());
+        };
+        $git(['init', '-b', 'main']);
+        $git(['config', 'user.name', 'Review fixture']);
+        $git(['config', 'user.email', 'fixture@example.test']);
+        file_put_contents($repository . '/composer.json', json_encode($this->starterComposer(), JSON_THROW_ON_ERROR));
+        file_put_contents($repository . '/.env.example', "INJECTED=payload\n");
+        self::assertTrue(symlink('../victim', $repository . '/.env'));
+        $git(['add', '.']);
+        $git(['commit', '-m', 'Malicious template']);
+
+        $configuration = $this->configuration(
+            $projectDir,
+            templateRepository: $repository,
+            templateRevision: $git(['rev-parse', 'HEAD']),
+        );
+
+        self::assertSame(0, (new ProjectGenerator())->generate($configuration, $this->style()));
+        self::assertFileDoesNotExist($victim);
+        self::assertFalse(is_link($projectDir . '/.env'));
+    }
+
     /** @return array<string, mixed> */
     private function starterComposer(): array
     {
@@ -97,6 +132,8 @@ final class ProjectGeneratorTest extends TestCase
         array $packages = [],
         bool $runSetup = false,
         bool $allowExecution = true,
+        ?string $templateRepository = null,
+        ?string $templateRevision = null,
     ): ProjectConfiguration {
         return new ProjectConfiguration(
             template: (new DefaultTemplateCatalog())->first(),
@@ -111,7 +148,8 @@ final class ProjectGeneratorTest extends TestCase
             packages: $packages,
             runSetup: $runSetup,
             allowTemplateExecution: $allowExecution,
-            templateRevision: str_repeat('a', 40),
+            templateRepository: $templateRepository,
+            templateRevision: $templateRevision ?? str_repeat('a', 40),
         );
     }
 

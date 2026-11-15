@@ -66,10 +66,14 @@ final readonly class ProjectGenerator
             return $exitCode;
         }
 
+        // core.symlinks=false: template symlinks (e.g. .env -> ~/.bashrc) become plain files,
+        // so later .env/composer.json/.sympress writes cannot escape the project directory.
         $exitCode = $this->commandRunner->run(
             ['git',
             '-c',
             'core.hooksPath=/dev/null',
+            '-c',
+            'core.symlinks=false',
             'checkout',
             '--detach',
             $revision],
@@ -154,7 +158,8 @@ final readonly class ProjectGenerator
             $this->formatCommand(['git', '-c', 'core.hooksPath=/dev/null', 'clone', '--no-checkout', '--',
                 $configuration->templateRepository ?: $configuration->template->repositoryUrl,
                 $configuration->directory]),
-            $this->formatCommand(['git', '-c', 'core.hooksPath=/dev/null', 'checkout', '--detach',
+            $this->formatCommand(['git', '-c', 'core.hooksPath=/dev/null', '-c', 'core.symlinks=false',
+                'checkout', '--detach',
                 $configuration->templateRevision ?? '<resolved immutable SHA>']),
             'patch composer.json',
             'write .env',
