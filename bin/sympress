@@ -3,6 +3,7 @@
 
 declare(strict_types=1);
 
+use SymPress\Cli\Command\AgentsDocsCommand;
 use SymPress\Cli\Command\CreateProjectCommand;
 use SymPress\Cli\Command\UpdateProjectCommand;
 use Symfony\Component\Console\Application;
@@ -46,10 +47,11 @@ if (!class_exists(CreateProjectCommand::class)) {
     });
 }
 
-$application = new Application('SymPress CLI', '0.1.0');
+$application = new Application('SymPress CLI', '0.2.0');
 $commands = [
     new CreateProjectCommand(),
     new UpdateProjectCommand(),
+    new AgentsDocsCommand(),
 ];
 
 foreach ($commands as $command) {
