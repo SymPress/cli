@@ -130,6 +130,24 @@ By default the update command patches `composer.json`, updates
 `.sympress/project.json` and runs `composer update` for newly added packages. Use
 `--dry-run` to inspect the plan and `--no-install` to skip Composer execution.
 
+## Docs For Coding Agents
+
+Coding agents work best with the docs of the versions a project actually uses.
+Run `sympress agents:md` in a project with a `composer.lock`:
+
+```bash
+sympress agents:md
+sympress agents:md --output=CLAUDE.md
+sympress agents:md --dry-run
+```
+
+The command reads the installed `sympress/*` packages and their exact commits
+from `composer.lock`, downloads each package's `docs/` folder at that commit into
+`.sympress-docs/`, lists the files in a marked block of `AGENTS.md` (or
+`CLAUDE.md`) and adds `/.sympress-docs/` to `.gitignore`. Rerunning it replaces
+the folder and the block; the rest of the index file stays as it is. Run it again
+after `composer update`. Set `GITHUB_TOKEN` to raise GitHub's API rate limit.
+
 ## What It Does
 
 1. Resolves the selected version/ref once to an immutable Git SHA, clones without
