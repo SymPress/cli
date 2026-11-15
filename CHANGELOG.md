@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.0 — 2026-11-15
+
+- Add `sympress agents:md`: copies the `docs/` folders of the installed SymPress packages, at the commits in `composer.lock`, into `.sympress-docs/` and indexes them in `AGENTS.md` or `CLAUDE.md` for coding agents.
+
 ## 0.1.4 — 2026-11-06
 
 - Use the Symfony 8.1.11 security patches released on November 4.
