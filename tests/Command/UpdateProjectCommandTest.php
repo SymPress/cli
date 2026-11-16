@@ -6,8 +6,12 @@ namespace SymPress\Cli\Tests\Command;
 
 use PHPUnit\Framework\TestCase;
 use SymPress\Cli\Command\UpdateProjectCommand;
+use SymPress\Cli\Generator\CommandRunner;
 use SymPress\Cli\Project\ProjectMetadata;
 use SymPress\Cli\Project\ProjectMetadataStore;
+use SymPress\Cli\Repository\RepositoryManifestLoader;
+use SymPress\Cli\Update\ProjectUpdater;
+use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Tester\CommandTester;
 
 final class UpdateProjectCommandTest extends TestCase
@@ -49,6 +53,63 @@ final class UpdateProjectCommandTest extends TestCase
 
         self::assertSame(2, $exitCode);
         self::assertStringContainsString('requires --level=minor or --level=major', $tester->getDisplay());
+    }
+
+    public function testComposerUpdateWithNewCatalogRepositoryRequiresTrust(): void
+    {
+        $projectDir = $this->projectDirectory();
+        $manifest = $projectDir . '/catalog.json';
+        file_put_contents($manifest, json_encode([
+            'schemaVersion' => 1,
+            'packageSuggestions' => [[
+                'name' => 'acme/remote',
+                'label' => 'Remote',
+                'description' => 'Package from a catalog VCS repository.',
+                'recommendedProfiles' => ['microservice'],
+                'repositoryUrl' => 'https://example.test/acme/remote.git',
+            ]],
+        ], JSON_THROW_ON_ERROR));
+        $runner = new class implements CommandRunner {
+            /** @var list<list<string>> */
+            public array $commands = [];
+
+            public function run(array $command, ?string $cwd, OutputInterface $output): int
+            {
+                $this->commands[] = $command;
+
+                return 0;
+            }
+        };
+        $tester = new CommandTester(new UpdateProjectCommand(
+            new ProjectMetadataStore(),
+            new RepositoryManifestLoader(),
+            new ProjectUpdater(commandRunner: $runner),
+        ));
+        $options = ['directory' => $projectDir, '--level' => 'patch', '--manifest' => $manifest,
+            '--no-remote-manifest' => true];
+        $composerJson = (string) file_get_contents($projectDir . '/composer.json');
+
+        self::assertSame(0, $tester->execute([...$options, '--dry-run' => true]));
+        self::assertStringContainsString('https://example.test/acme/remote.git', $tester->getDisplay());
+
+        self::assertSame(2, $tester->execute($options));
+        self::assertStringContainsString('--allow-template-execution', $tester->getDisplay());
+        self::assertSame([], $runner->commands);
+        self::assertSame($composerJson, file_get_contents($projectDir . '/composer.json'));
+
+        self::assertSame(0, $tester->execute([...$options, '--allow-template-execution' => true]));
+        self::assertSame('update', $runner->commands[0][1] ?? null);
+        self::assertStringContainsString(
+            'example.test/acme/remote.git',
+            (string) file_get_contents($projectDir . '/composer.json'),
+        );
+
+        // Built-in catalog repositories (here sympress/nginx-cache) keep the documented flow.
+        $runner->commands = [];
+        self::assertSame(0, $tester->execute(['directory' => $projectDir, '--level' => 'minor', '--type' => 'website',
+            '--no-remote-manifest' => true]), $tester->getDisplay());
+        self::assertStringContainsString('https://github.com/SymPress/nginx-cache', $tester->getDisplay());
+        self::assertSame('update', $runner->commands[0][1] ?? null);
     }
 
     private function projectDirectory(): string
