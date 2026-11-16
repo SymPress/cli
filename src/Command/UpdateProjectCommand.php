@@ -65,6 +65,12 @@ final class UpdateProjectCommand extends Command
             )
             ->addOption('composer-bin', null, InputOption::VALUE_REQUIRED, 'Composer executable.', 'composer')
             ->addOption('no-install', null, InputOption::VALUE_NONE, 'Do not run composer update after patching.')
+            ->addOption(
+                'allow-template-execution',
+                null,
+                InputOption::VALUE_NONE,
+                'Trust new Composer repositories from the template catalog and run composer update.',
+            )
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Show the update plan without changing files.')
             ->setHelp(<<<'HELP'
 Run this inside a project created by the SymPress CLI:
@@ -118,6 +124,7 @@ HELP);
                 (bool) $input->getOption('dry-run'),
                 !(bool) $input->getOption('no-install'),
                 (string) $input->getOption('composer-bin'),
+                (bool) $input->getOption('allow-template-execution'),
             );
         } catch (InvalidArgumentException | RuntimeException $exception) {
             $io->error($exception->getMessage());

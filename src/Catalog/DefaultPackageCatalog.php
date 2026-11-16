@@ -165,6 +165,17 @@ final class DefaultPackageCatalog
         ));
     }
 
+    /**
+     * @return list<string>
+     */
+    public function repositoryUrls(): array
+    {
+        return array_values(array_unique(array_filter(array_map(
+            static fn (PackageSuggestion $suggestion): ?string => $suggestion->repositoryUrl,
+            array_values($this->suggestions),
+        ))));
+    }
+
     public function referenceFor(string $package, bool $dev = false): PackageReference
     {
         $reference = PackageReference::fromComposerString($package);

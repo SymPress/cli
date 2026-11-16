@@ -93,21 +93,33 @@ final readonly class ProjectUpdater
         bool $dryRun,
         bool $runComposer,
         string $composerBinary,
+        bool $allowTemplateExecution = false,
     ): int {
+        $missingPackages = $this->composerJsonEditor->missingPackageReferences(
+            $plan->projectDir,
+            $plan->packages,
+            $plan->devPackages,
+        );
+        $newRepositories = $this->composerJsonEditor->missingRepositoryUrls(
+            $plan->projectDir,
+            [...$plan->packages, ...$plan->devPackages],
+        );
+
         if ($dryRun) {
-            $this->renderPlan(
-                $plan,
-                $io,
-                $this->composerJsonEditor->missingPackageReferences(
-                    $plan->projectDir,
-                    $plan->packages,
-                    $plan->devPackages,
-                ),
-                $runComposer,
-                $composerBinary,
-            );
+            $this->renderPlan($plan, $io, $missingPackages, $newRepositories, $runComposer, $composerBinary);
 
             return 0;
+        }
+
+        // Repositories from template/manifest catalogs run code via composer update; built-in ones are trusted.
+        $untrustedRepositories = array_diff($newRepositories, (new DefaultPackageCatalog())->repositoryUrls());
+
+        if ($runComposer && $missingPackages !== [] && $untrustedRepositories !== [] && !$allowTemplateExecution) {
+            throw new RuntimeException(sprintf(
+                'The update adds Composer repositories from the template catalog: %s. Review them and pass'
+                . ' --allow-template-execution to run composer update, or --no-install to only patch composer.json.',
+                implode(', ', $untrustedRepositories),
+            ));
         }
 
         $changedPackages = $this->composerJsonEditor->mergePackageReferences(
@@ -116,7 +128,7 @@ final readonly class ProjectUpdater
             $plan->devPackages,
         );
         $this->metadataStore->write($plan->projectDir, $plan->nextMetadata);
-        $this->renderPlan($plan, $io, $changedPackages, $runComposer, $composerBinary);
+        $this->renderPlan($plan, $io, $changedPackages, $newRepositories, $runComposer, $composerBinary);
 
         if (!$runComposer || $changedPackages === []) {
             return 0;
@@ -136,11 +148,13 @@ final readonly class ProjectUpdater
 
     /**
      * @param list<string> $changedPackages
+     * @param list<string> $newRepositories
      */
     private function renderPlan(
         ProjectUpdatePlan $plan,
         SymfonyStyle $io,
         array $changedPackages,
+        array $newRepositories,
         bool $runComposer,
         string $composerBinary,
     ): void {
@@ -167,6 +181,11 @@ final readonly class ProjectUpdater
                 static fn (PackageReference $package): string => $package->name . ':' . $package->constraint,
                 $plan->devPackages,
             ));
+        }
+
+        if ($newRepositories !== []) {
+            $io->section('New Composer repositories');
+            $io->listing($newRepositories);
         }
 
         if ($changedPackages === []) {
