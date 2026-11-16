@@ -88,6 +88,16 @@ final class ComposerJsonEditor
     }
 
     /**
+     * @param list<PackageReference> $packages
+     *
+     * @return list<string>
+     */
+    public function missingRepositoryUrls(string $projectDir, array $packages): array
+    {
+        return $this->newRepositoryUrls($this->read($projectDir . '/composer.json'), $packages);
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function read(string $path): array
@@ -194,13 +204,7 @@ final class ComposerJsonEditor
      */
     private function mergeRepositories(array &$data, array $packages): void
     {
-        $urls = [];
-
-        foreach ($packages as $package) {
-            if ($package->repositoryUrl !== null) {
-                $urls[$package->repositoryUrl] = true;
-            }
-        }
+        $urls = $this->newRepositoryUrls($data, $packages);
 
         if ($urls === []) {
             return;
@@ -210,23 +214,38 @@ final class ComposerJsonEditor
             $data['repositories'] = [];
         }
 
-        $knownUrls = [];
-
-        foreach ($data['repositories'] as $repository) {
-            if (is_array($repository) && isset($repository['url']) && is_string($repository['url'])) {
-                $knownUrls[$repository['url']] = true;
-            }
-        }
-
-        foreach (array_keys($urls) as $url) {
-            if (isset($knownUrls[$url])) {
-                continue;
-            }
-
+        foreach ($urls as $url) {
             $data['repositories'][] = [
                 'type' => 'vcs',
                 'url' => $url,
             ];
         }
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     * @param list<PackageReference> $packages
+     *
+     * @return list<string>
+     */
+    private function newRepositoryUrls(array $data, array $packages): array
+    {
+        $knownUrls = [];
+
+        foreach (is_array($data['repositories'] ?? null) ? $data['repositories'] : [] as $repository) {
+            if (is_array($repository) && isset($repository['url']) && is_string($repository['url'])) {
+                $knownUrls[$repository['url']] = true;
+            }
+        }
+
+        $urls = [];
+
+        foreach ($packages as $package) {
+            if ($package->repositoryUrl !== null && !isset($knownUrls[$package->repositoryUrl])) {
+                $urls[$package->repositoryUrl] = true;
+            }
+        }
+
+        return array_keys($urls);
     }
 }
