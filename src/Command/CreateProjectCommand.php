@@ -103,6 +103,12 @@ final class CreateProjectCommand extends Command
                 'Explicit immutable Git SHA for an independent manifest.'
             )
             ->addOption(
+                'manifest-sha256',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'SHA-256 of the reviewed manifest file; required for setup with a remote JSON manifest.'
+            )
+            ->addOption(
                 'allow-template-execution',
                 null,
                 InputOption::VALUE_NONE,
