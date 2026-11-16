@@ -55,6 +55,30 @@ final class RepositoryManifestLoaderTest extends TestCase
         self::assertSame([], $method->invoke($loader, 'http://github.com/SymPress/starter', 'main'));
     }
 
+    public function testExpectedSha256PinsManifestContent(): void
+    {
+        $file = $this->temporaryDirectory() . '/sympress-cli.json';
+        file_put_contents($file, '{"schemaVersion":1}');
+        $loader = new RepositoryManifestLoader();
+
+        self::assertNotNull($loader->load($file, '', strtoupper(hash_file('sha256', $file) ?: '')));
+
+        $this->expectExceptionMessage('does not match the expected SHA-256');
+        $loader->load($file, '', str_repeat('0', 64));
+    }
+
+    public function testOnlyRemoteJsonManifestsAreUnpinned(): void
+    {
+        $loader = new RepositoryManifestLoader();
+        $file = $this->temporaryDirectory() . '/sympress-cli.json';
+        file_put_contents($file, '{"schemaVersion":1}');
+
+        self::assertTrue($loader->isUnpinnedRemote('https://example.test/catalog.json'));
+        self::assertFalse($loader->isUnpinnedRemote($file));
+        self::assertFalse($loader->isUnpinnedRemote(dirname($file)));
+        self::assertFalse($loader->isUnpinnedRemote('https://github.com/SymPress/starter'));
+    }
+
     private function temporaryDirectory(): string
     {
         $directory = sys_get_temp_dir() . '/sympress-cli-' . bin2hex(random_bytes(6));

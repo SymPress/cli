@@ -47,6 +47,7 @@ final readonly class ProjectQuestionnaire
         $templates = $this->templates;
         $profiles = $this->profiles;
         $packages = $this->packages;
+        $this->assertSetupManifestIsPinned($input);
         $explicitManifest = $this->loadExplicitManifest($input);
 
         if ($explicitManifest !== null) {
@@ -141,7 +142,36 @@ final readonly class ProjectQuestionnaire
             return null;
         }
 
-        return $this->manifestLoader->loadRequired($source, $this->manifestRef($input));
+        return $this->manifestLoader->loadRequired(
+            $source,
+            $this->manifestRef($input),
+            $this->emptyToNull($input->getOption('manifest-sha256')) ?? '',
+        );
+    }
+
+    /**
+     * A remote JSON manifest can change between review (--dry-run) and the real run,
+     * so its setup command and package repositories only run when its content is pinned.
+     */
+    private function assertSetupManifestIsPinned(InputInterface $input): void
+    {
+        $source = $this->emptyToNull($input->getOption('manifest'));
+
+        if (
+            $source === null
+            || !(bool) $input->getOption('allow-template-execution')
+            || (bool) $input->getOption('no-setup')
+            || (bool) $input->getOption('dry-run')
+            || $this->emptyToNull($input->getOption('manifest-sha256')) !== null
+            || !$this->manifestLoader->isUnpinnedRemote($source)
+        ) {
+            return;
+        }
+
+        throw new \RuntimeException(
+            'Setup with a remote JSON manifest requires --manifest-sha256=<SHA-256 of the reviewed file>,'
+            . ' or pass a reviewed local copy with --manifest=./file.json.',
+        );
     }
 
     private function loadRemoteManifest(

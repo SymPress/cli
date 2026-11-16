@@ -190,6 +190,7 @@ sympress project:create [directory] [options]
 - `--manifest=./sympress-cli.json`
 - `--manifest=https://github.com/SymPress/starter`
 - `--manifest-ref=<40-character-Git-SHA>`
+- `--manifest-sha256=<SHA-256 of the reviewed manifest file>`
 - `--no-remote-manifest`
 - `--allow-template-execution`
 - `--no-setup`
@@ -277,7 +278,9 @@ files; there is no fallback to main. A snapshot manifest cannot redirect the
 already selected package/repository/default ref. Explicit raw HTTPS JSON URLs and
 local files are independent catalogs with their own provenance; remote Git
 catalogs require a 40-character --manifest-ref. Materialization still inspects the
-checked-out manifest before setup.
+checked-out manifest before setup. A remote JSON URL can change between review and
+run, so setup with one requires --manifest-sha256 (e.g. `sha256sum` of the file you
+reviewed); alternatively pass the reviewed local copy as --manifest=./file.json.
 
 --allow-template-execution authorizes setup commands and all executable behavior
 those commands invoke (including Composer scripts/plugins). Review the repository,

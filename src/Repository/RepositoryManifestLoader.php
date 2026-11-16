@@ -22,9 +22,9 @@ final readonly class RepositoryManifestLoader
     ) {
     }
 
-    public function loadRequired(string $source, string $ref = ''): RepositoryManifest
+    public function loadRequired(string $source, string $ref = '', string $sha256 = ''): RepositoryManifest
     {
-        $manifest = $this->load($source, $ref);
+        $manifest = $this->load($source, $ref, $sha256);
 
         if ($manifest === null) {
             throw new RuntimeException(sprintf('No SymPress CLI manifest found at "%s".', $source));
@@ -33,7 +33,7 @@ final readonly class RepositoryManifestLoader
         return $manifest;
     }
 
-    public function load(string $source, string $ref = ''): ?RepositoryManifest
+    public function load(string $source, string $ref = '', string $sha256 = ''): ?RepositoryManifest
     {
         $source = trim($source);
 
@@ -55,16 +55,16 @@ final readonly class RepositoryManifestLoader
                         env: ['GIT_DIR' => false, 'GIT_WORK_TREE' => false, 'GIT_INDEX_FILE' => false],
                     );
                     if ($process->run() === 0) {
-                        return $this->parser->parse($process->getOutput(), $source . '@' . $ref . ':' . $path);
+                        return $this->parse($process->getOutput(), $source . '@' . $ref . ':' . $path, $sha256);
                     }
                 }
                 return null;
             }
-            return $this->loadFromDirectory($source);
+            return $this->loadFromDirectory($source, $sha256);
         }
 
         if (is_file($source)) {
-            return $this->parser->parse((string) file_get_contents($source), $source);
+            return $this->parse((string) file_get_contents($source), $source, $sha256);
         }
 
         if (!str_ends_with($source, '.json') && preg_match('/^[a-f0-9]{40}$/D', $ref) !== 1) {
@@ -74,7 +74,7 @@ final readonly class RepositoryManifestLoader
             $json = $this->readUrl($url);
 
             if ($json !== null) {
-                return $this->parser->parse($json, $url);
+                return $this->parse($json, $url, $sha256);
             }
         }
 
@@ -86,13 +86,32 @@ final readonly class RepositoryManifestLoader
         return $this->load($repositoryUrl, $ref);
     }
 
-    private function loadFromDirectory(string $directory): ?RepositoryManifest
+    /**
+     * Explicit HTTPS JSON manifests are fetched as served; no Git SHA pins their content.
+     */
+    public function isUnpinnedRemote(string $source): bool
+    {
+        $source = trim($source);
+
+        return str_ends_with($source, '.json') && !is_dir($source) && !is_file($source);
+    }
+
+    private function parse(string $json, string $source, string $sha256): RepositoryManifest
+    {
+        if ($sha256 !== '' && !hash_equals(strtolower($sha256), hash('sha256', $json))) {
+            throw new RuntimeException(sprintf('Manifest "%s" does not match the expected SHA-256.', $source));
+        }
+
+        return $this->parser->parse($json, $source);
+    }
+
+    private function loadFromDirectory(string $directory, string $sha256): ?RepositoryManifest
     {
         foreach (self::MANIFEST_PATHS as $path) {
             $manifest = rtrim($directory, '/') . '/' . $path;
 
             if (is_file($manifest)) {
-                return $this->parser->parse((string) file_get_contents($manifest), $manifest);
+                return $this->parse((string) file_get_contents($manifest), $manifest, $sha256);
             }
         }
 

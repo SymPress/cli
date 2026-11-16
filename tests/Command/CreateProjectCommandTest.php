@@ -109,6 +109,24 @@ final class CreateProjectCommandTest extends TestCase
         self::assertStringContainsString('acme/runtime:*', $output);
     }
 
+    public function testSetupWithUnpinnedRemoteJsonManifestRequiresSha256(): void
+    {
+        $directory = $this->temporaryDirectory();
+        $tester = new CommandTester(new CreateProjectCommand());
+
+        $exitCode = $tester->execute([
+            'directory' => $directory . '/project',
+            '--manifest' => 'https://example.test/catalog.json',
+            '--allow-template-execution' => true,
+            '--name' => 'Pinned',
+        ], ['interactive' => false]);
+
+        self::assertSame(2, $exitCode);
+        self::assertStringContainsString('--manifest-sha256', $tester->getDisplay());
+        self::assertDirectoryDoesNotExist($directory . '/project');
+        new Filesystem()->remove($directory);
+    }
+
     private function temporaryDirectory(): string
     {
         $directory = sys_get_temp_dir() . '/sympress-cli-' . bin2hex(random_bytes(6));
