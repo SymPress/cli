@@ -41,11 +41,7 @@ final class GitHubDocsSource implements DocsSource
 
     private function get(string $url): string
     {
-        $headers = ['User-Agent: sympress-cli', 'Accept: application/vnd.github+json'];
-        if ($this->token !== null && $this->token !== '') {
-            $headers[] = 'Authorization: Bearer ' . $this->token;
-        }
-        $context = stream_context_create(['http' => ['header' => $headers, 'timeout' => 20, 'ignore_errors' => true]]);
+        $context = stream_context_create(['http' => $this->httpOptions($url)]);
         $body = @file_get_contents($url, false, $context);
         // After redirects the headers hold one status line per response; the last one counts.
         $status = 0;
@@ -59,5 +55,22 @@ final class GitHubDocsSource implements DocsSource
         }
 
         return $body;
+    }
+
+    /** @return array<string, mixed> */
+    private function httpOptions(string $url): array
+    {
+        $options = [
+            'header' => ['User-Agent: sympress-cli', 'Accept: application/vnd.github+json'],
+            'timeout' => 20,
+            'ignore_errors' => true,
+        ];
+        // The token is meant for the API only, and PHP would resend it to any redirect target.
+        if ($this->token !== null && $this->token !== '' && str_starts_with($url, 'https://api.github.com/')) {
+            $options['header'][] = 'Authorization: Bearer ' . $this->token;
+            $options['follow_location'] = 0;
+        }
+
+        return $options;
     }
 }
