@@ -8,6 +8,7 @@ final readonly class TemplateDefinition
 {
     /**
      * @param list<string> $setupCommand
+     * @param string|null  $defaultRevision Commit the default version must resolve to; null skips the check.
      */
     public function __construct(
         public string $id,
@@ -15,8 +16,9 @@ final readonly class TemplateDefinition
         public string $packageName,
         public string $repositoryUrl,
         public string $description,
-        public string $defaultVersion = '1.1.8',
+        public string $defaultVersion = '1.2.5',
         public array $setupCommand = ['bin/console', 'setup', '{project_slug}'],
+        public ?string $defaultRevision = null,
     ) {
     }
 

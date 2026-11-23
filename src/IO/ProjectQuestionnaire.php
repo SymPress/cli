@@ -62,6 +62,10 @@ final readonly class ProjectQuestionnaire
         $template = $this->selectTemplate($input, $io, $interactive, $templates);
         $templateRepository = $this->emptyToNull($input->getOption('repository')) ?: $template->repositoryUrl;
         $version = $this->emptyToNull($input->getOption('template-version')) ?: $template->defaultVersion;
+        // The built-in default is pinned to a reviewed commit, so a moved tag cannot change new projects.
+        $pinnedRevision = $version === $template->defaultVersion && $templateRepository === $template->repositoryUrl
+            ? $template->defaultRevision
+            : null;
         $revision = null;
         if (
             !(bool) $input->getOption('no-remote-manifest')
@@ -70,7 +74,16 @@ final readonly class ProjectQuestionnaire
             || is_file($templateRepository . '/HEAD'))
         ) {
             $revision = (new \SymPress\Cli\Repository\TemplateRevision())->resolve($templateRepository, $version);
+            if ($pinnedRevision !== null && $revision !== $pinnedRevision) {
+                throw new \RuntimeException(sprintf(
+                    'Template version %s resolves to %s, not to the pinned commit %s.',
+                    $version,
+                    $revision,
+                    $pinnedRevision,
+                ));
+            }
         }
+        $revision ??= $pinnedRevision;
         $remoteManifest = $this->loadRemoteManifest($input, $templateRepository, $revision);
 
         if ($remoteManifest !== null) {

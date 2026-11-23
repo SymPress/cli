@@ -117,7 +117,7 @@ final class RepositoryManifestParser
             repositoryUrl: $repositoryUrl,
             description: $this->string($template, 'description', $path)
                 ?? 'Repository-provided starter template.',
-            defaultVersion: $this->string($template, 'defaultVersion', $path) ?? '1.1.8',
+            defaultVersion: $this->string($template, 'defaultVersion', $path) ?? '1.2.5',
             setupCommand: $setupCommand,
         );
     }

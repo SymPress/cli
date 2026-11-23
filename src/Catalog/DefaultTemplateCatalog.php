@@ -27,6 +27,8 @@ final class DefaultTemplateCatalog
                 repositoryUrl: 'https://github.com/SymPress/starter',
                 description: 'WordPress website starter with DDEV, SymPress Runtime, SymPress kernel, WP-CLI'
                     . ' and quality tooling.',
+                defaultVersion: '1.2.5',
+                defaultRevision: 'b403cc00866a5fcb189dadd2b211f4cb198a5e78',
             ),
         ];
 
