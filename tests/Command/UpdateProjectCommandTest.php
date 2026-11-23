@@ -55,6 +55,21 @@ final class UpdateProjectCommandTest extends TestCase
         self::assertStringContainsString('requires --level=minor or --level=major', $tester->getDisplay());
     }
 
+    public function testDryRunKeepsTemplateFromManifestThatIsNotBuiltIn(): void
+    {
+        $projectDir = $this->projectDirectory('acme-starter');
+        $tester = new CommandTester(new UpdateProjectCommand());
+
+        $exitCode = $tester->execute([
+            'directory' => $projectDir,
+            '--dry-run' => true,
+            '--no-remote-manifest' => true,
+        ], ['interactive' => false]);
+
+        self::assertSame(0, $exitCode, $tester->getDisplay());
+        self::assertStringContainsString('acme-starter -> acme-starter', $tester->getDisplay());
+    }
+
     public function testComposerUpdateWithNewCatalogRepositoryRequiresTrust(): void
     {
         $projectDir = $this->projectDirectory();
@@ -112,7 +127,7 @@ final class UpdateProjectCommandTest extends TestCase
         self::assertSame('update', $runner->commands[0][1] ?? null);
     }
 
-    private function projectDirectory(): string
+    private function projectDirectory(string $templateId = 'sympress-starter'): string
     {
         $projectDir = $this->temporaryDirectory();
         file_put_contents($projectDir . '/composer.json', json_encode([
@@ -129,7 +144,7 @@ final class UpdateProjectCommandTest extends TestCase
                 composerPackageName: 'acme/example-project',
                 ddevTld: 'ddev.site',
                 profileId: 'microservice',
-                templateId: 'sympress-starter',
+                templateId: $templateId,
                 templatePackageName: 'sympress/starter',
                 templateRepositoryUrl: 'https://github.com/SymPress/starter',
                 templateVersion: '1.0.x-dev',

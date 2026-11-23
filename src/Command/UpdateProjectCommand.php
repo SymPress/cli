@@ -10,6 +10,7 @@ use SymPress\Cli\Catalog\DefaultPackageCatalog;
 use SymPress\Cli\Catalog\DefaultProfileCatalog;
 use SymPress\Cli\Catalog\DefaultTemplateCatalog;
 use SymPress\Cli\Completion\DirectoryCompletion;
+use SymPress\Cli\Model\TemplateDefinition;
 use SymPress\Cli\Project\ProjectMetadata;
 use SymPress\Cli\Project\ProjectMetadataStore;
 use SymPress\Cli\Repository\RepositoryManifest;
@@ -160,6 +161,17 @@ HELP);
     private function catalogs(InputInterface $input, ProjectMetadata $metadata): array
     {
         $templates = new DefaultTemplateCatalog();
+        if (!in_array($metadata->templateId, array_map(static fn ($t): string => $t->id, $templates->all()), true)) {
+            // Manifest templates are not built in; the metadata keeps their identity until a manifest describes them.
+            $templates = $templates->withTemplates([new TemplateDefinition(
+                id: $metadata->templateId,
+                label: $metadata->templateId,
+                packageName: $metadata->templatePackageName,
+                repositoryUrl: $metadata->templateRepositoryUrl,
+                description: 'Template recorded in ' . ProjectMetadataStore::RELATIVE_PATH . '.',
+                defaultVersion: $metadata->templateVersion,
+            )]);
+        }
         $profiles = new DefaultProfileCatalog();
         $packages = new DefaultPackageCatalog();
         $explicitManifest = $this->loadExplicitManifest($input);
