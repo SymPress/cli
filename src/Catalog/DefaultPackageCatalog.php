@@ -44,10 +44,8 @@ final class DefaultPackageCatalog
                 name: 'sympress/mailer',
                 label: 'Mailer',
                 description: 'Mail transport and templating integration for transactional messages.',
-                constraint: 'dev-main',
                 recommendedProfiles: ['app', 'microservice', 'commerce'],
                 optionalProfiles: ['website'],
-                repositoryUrl: 'https://github.com/SymPress/mailer',
             ),
             new PackageSuggestion(
                 name: 'sympress/migration',
@@ -59,9 +57,7 @@ final class DefaultPackageCatalog
                 name: 'sympress/nginx-cache',
                 label: 'Nginx Cache',
                 description: 'Cache-aware WordPress integration for nginx-backed environments.',
-                constraint: 'dev-main',
                 recommendedProfiles: ['website', 'commerce'],
-                repositoryUrl: 'https://github.com/SymPress/nginx-cache',
             ),
             new PackageSuggestion(
                 name: 'sympress/orm',
@@ -163,17 +159,6 @@ final class DefaultPackageCatalog
             static fn (PackageSuggestion $suggestion): bool => $suggestion->isRecommendedFor($profileId)
                 && ($dev === null || $suggestion->dev === $dev),
         ));
-    }
-
-    /**
-     * @return list<string>
-     */
-    public function repositoryUrls(): array
-    {
-        return array_values(array_unique(array_filter(array_map(
-            static fn (PackageSuggestion $suggestion): ?string => $suggestion->repositoryUrl,
-            array_values($this->suggestions),
-        ))));
     }
 
     public function referenceFor(string $package, bool $dev = false): PackageReference
