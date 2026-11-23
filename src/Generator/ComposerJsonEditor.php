@@ -8,6 +8,7 @@ use JsonException;
 use RuntimeException;
 use SymPress\Cli\Model\PackageReference;
 use SymPress\Cli\Model\ProjectConfiguration;
+use SymPress\Cli\Util\ProjectPath;
 
 final class ComposerJsonEditor
 {
@@ -33,6 +34,7 @@ final class ComposerJsonEditor
         }
 
         $encoded = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        ProjectPath::assertInside($projectDir, $path);
         file_put_contents($path, $encoded . "\n");
 
         return true;
@@ -60,6 +62,7 @@ final class ComposerJsonEditor
         $this->mergeRepositories($data, [...$packages, ...$devPackages]);
 
         $encoded = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        ProjectPath::assertInside($projectDir, $path);
         file_put_contents($path, $encoded . "\n");
 
         return $changed;

@@ -6,6 +6,7 @@ namespace SymPress\Cli\Docs;
 
 use InvalidArgumentException;
 use JsonException;
+use SymPress\Cli\Util\ProjectPath;
 use Symfony\Component\Filesystem\Filesystem;
 
 /** Copies the docs of the installed SymPress packages into the project and indexes them for coding agents. */
@@ -73,6 +74,8 @@ final class AgentsDocsWriter
             );
         }
         $target = $projectDir . '/' . self::DIRECTORY;
+        ProjectPath::assertInside($projectDir, $projectDir . '/' . $indexFile);
+        ProjectPath::assertInside($projectDir, $projectDir . '/.gitignore');
         $this->filesystem->remove($target);
         $written = [];
         foreach ($docs as $repository => $files) {

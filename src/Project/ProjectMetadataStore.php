@@ -6,6 +6,7 @@ namespace SymPress\Cli\Project;
 
 use JsonException;
 use RuntimeException;
+use SymPress\Cli\Util\ProjectPath;
 use Symfony\Component\Filesystem\Filesystem;
 
 final readonly class ProjectMetadataStore
@@ -21,6 +22,7 @@ final readonly class ProjectMetadataStore
     {
         $path = $this->path($projectDir);
         $this->filesystem->mkdir(dirname($path));
+        ProjectPath::assertInside($projectDir, $path);
         $this->filesystem->dumpFile(
             $path,
             json_encode($metadata->toArray(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR)
