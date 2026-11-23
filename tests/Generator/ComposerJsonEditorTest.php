@@ -82,11 +82,10 @@ final class ComposerJsonEditorTest extends TestCase
         self::assertSame('^8.1.0', $data['require-dev']['symfony/var-dumper']);
     }
 
-    public function testApplyWritesInstallMetadataForUnpublishedSuggestions(): void
+    public function testApplyLimitsCatalogRepositoriesToTheirPackages(): void
     {
         $projectDir = $this->temporaryDirectory();
         file_put_contents($projectDir . '/composer.json', '{}');
-        $catalog = new DefaultPackageCatalog();
         $configuration = new ProjectConfiguration(
             template: (new DefaultTemplateCatalog())->first(),
             profile: (new DefaultProfileCatalog())->default(),
@@ -98,20 +97,20 @@ final class ComposerJsonEditorTest extends TestCase
             wpAdminUsername: 'admin',
             wpAdminPassword: 'secret-secret',
             packages: [
-                $catalog->referenceFor('sympress/mailer'),
-                $catalog->referenceFor('sympress/nginx-cache'),
+                new PackageReference('acme/mailer', 'dev-main', 'https://example.test/acme/mailer.git'),
+                new PackageReference('acme/cache', '^1.0', 'https://example.test/acme/cache.git'),
             ],
         );
 
         (new ComposerJsonEditor())->apply($projectDir, $configuration);
 
         $data = json_decode((string) file_get_contents($projectDir . '/composer.json'), true);
-        $repositoryUrls = array_column($data['repositories'], 'url');
 
-        self::assertSame('dev-main', $data['require']['sympress/mailer']);
-        self::assertSame('dev-main', $data['require']['sympress/nginx-cache']);
-        self::assertContains('https://github.com/SymPress/mailer', $repositoryUrls);
-        self::assertContains('https://github.com/SymPress/nginx-cache', $repositoryUrls);
+        self::assertSame('dev-main', $data['require']['acme/mailer']);
+        self::assertSame([
+            ['type' => 'vcs', 'url' => 'https://example.test/acme/mailer.git', 'only' => ['acme/mailer']],
+            ['type' => 'vcs', 'url' => 'https://example.test/acme/cache.git', 'only' => ['acme/cache']],
+        ], $data['repositories']);
     }
 
     private function temporaryDirectory(): string

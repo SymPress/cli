@@ -183,16 +183,16 @@ final class UpdateProjectCommandTest extends TestCase
         self::assertSame(0, $tester->execute([...$options, '--allow-template-execution' => true]));
         self::assertSame('update', $runner->commands[0][1] ?? null);
         $repositories = json_decode((string) file_get_contents($projectDir . '/composer.json'), true)['repositories'];
-        self::assertContains(
-            ['type' => 'vcs', 'url' => 'https://example.test/acme/remote.git', 'only' => ['acme/remote']],
+        self::assertSame(
+            [['type' => 'vcs', 'url' => 'https://example.test/acme/remote.git', 'only' => ['acme/remote']]],
             $repositories,
         );
 
-        // Built-in catalog repositories (here sympress/nginx-cache) keep the documented flow.
+        // The built-in catalog adds no repositories, so its packages keep the documented flow.
         $runner->commands = [];
         self::assertSame(0, $tester->execute(['directory' => $projectDir, '--level' => 'minor', '--type' => 'website',
             '--no-remote-manifest' => true]), $tester->getDisplay());
-        self::assertStringContainsString('https://github.com/SymPress/nginx-cache', $tester->getDisplay());
+        self::assertStringContainsString('sympress/nginx-cache', $tester->getDisplay());
         self::assertSame('update', $runner->commands[0][1] ?? null);
     }
 
