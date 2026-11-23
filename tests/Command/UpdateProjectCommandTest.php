@@ -13,6 +13,7 @@ use SymPress\Cli\Repository\RepositoryManifestLoader;
 use SymPress\Cli\Update\ProjectUpdater;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Tester\CommandTester;
+use Symfony\Component\Process\Process;
 
 final class UpdateProjectCommandTest extends TestCase
 {
@@ -97,6 +98,42 @@ final class UpdateProjectCommandTest extends TestCase
         self::assertStringContainsString('SHA-256', $tester->getDisplay());
         $sha256 = hash('sha256', '{"schemaVersion":1}');
         self::assertSame(0, $tester->execute([...$options, '--manifest-sha256' => $sha256]), $tester->getDisplay());
+    }
+
+    public function testLocalTemplateRepositoryFromMetadataIsNotOpenedWithGit(): void
+    {
+        $projectDir = $this->projectDirectory();
+        $repository = $projectDir . '/planted';
+        mkdir($repository . '/.sympress', 0777, true);
+        file_put_contents($repository . '/.sympress/cli.json', json_encode(['schemaVersion' => 1,
+            'packageSuggestions' => [['name' => 'acme/planted', 'label' => 'Planted', 'description' => 'Planted.',
+                'recommendedProfiles' => ['microservice']]]], JSON_THROW_ON_ERROR));
+        $git = static function (array $arguments) use ($repository): string {
+            $process = new Process(['git', '-C', $repository, ...$arguments]);
+            $process->setEnv(['GIT_DIR' => false, 'GIT_WORK_TREE' => false, 'GIT_INDEX_FILE' => false]);
+            $process->mustRun();
+
+            return trim($process->getOutput());
+        };
+        $git(['init', '-b', 'main']);
+        $git(['add', '.']);
+        $git(['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-m', 'Planted']);
+        $store = new ProjectMetadataStore();
+        $metadata = $store->read($projectDir)->toArray();
+        $store->write($projectDir, ProjectMetadata::fromArray([...$metadata, 'templateRepositoryUrl' => 'planted',
+            'templateRevision' => $git(['rev-parse', 'HEAD'])]));
+        $cwd = (string) getcwd();
+        chdir($projectDir);
+        try {
+            $tester = new CommandTester(new UpdateProjectCommand());
+            $exitCode = $tester->execute(['--dry-run' => true], ['interactive' => false]);
+            self::assertSame(0, $exitCode, $tester->getDisplay());
+        } finally {
+            chdir($cwd);
+        }
+
+        self::assertStringContainsString('Skipped manifest discovery', $tester->getDisplay());
+        self::assertStringNotContainsString('acme/planted', $tester->getDisplay());
     }
 
     public function testComposerUpdateWithNewCatalogRepositoryRequiresTrust(): void
