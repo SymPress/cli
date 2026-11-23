@@ -130,8 +130,9 @@ By default the update command patches `composer.json`, updates
 `.sympress/project.json` and runs `composer update` for newly added packages. Use
 `--dry-run` to inspect the plan and `--no-install` to skip Composer execution.
 The plan lists new Composer repositories. If a template or manifest catalog adds a
-VCS repository that is not part of the CLI's built-in catalog, `composer update`
-only runs with `--allow-template-execution`.
+VCS repository that is not part of the CLI's built-in catalog, the update only
+writes it with `--allow-template-execution`, also with `--no-install`. Catalog
+repositories are limited with `"only"` to the packages they were added for.
 
 ## Docs For Coding Agents
 
