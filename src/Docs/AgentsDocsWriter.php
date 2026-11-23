@@ -45,8 +45,12 @@ final class AgentsDocsWriter
                 ? $match[1]
                 : '';
             $pinned = DocsPath::isRepository($repository) && DocsPath::isCommit($commit);
-            if (str_starts_with($name, 'sympress/') && $pinned) {
-                $version = is_string($package['version'] ?? null) ? $package['version'] : $commit;
+            // name and version end up in AGENTS.md, which agents read as instructions: no free text.
+            if (preg_match('#^sympress/[a-z0-9]+(?:[_.-]+[a-z0-9]+)*$#D', $name) === 1 && $pinned) {
+                $version = is_string($package['version'] ?? null)
+                    && preg_match('/^[A-Za-z0-9._+-]{1,64}$/D', $package['version']) === 1
+                    ? $package['version']
+                    : $commit;
                 $packages[$repository] = ['name' => $name, 'version' => $version, 'commit' => $commit];
             }
         }
