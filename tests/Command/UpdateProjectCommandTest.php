@@ -70,6 +70,35 @@ final class UpdateProjectCommandTest extends TestCase
         self::assertStringContainsString('acme-starter -> acme-starter', $tester->getDisplay());
     }
 
+    public function testTrustedUpdateWithUnpinnedRemoteJsonManifestRequiresSha256(): void
+    {
+        $tester = new CommandTester(new UpdateProjectCommand());
+
+        $exitCode = $tester->execute([
+            'directory' => $this->projectDirectory(),
+            '--manifest' => 'https://example.test/catalog.json',
+            '--allow-template-execution' => true,
+            '--no-remote-manifest' => true,
+        ], ['interactive' => false]);
+
+        self::assertSame(2, $exitCode);
+        self::assertStringContainsString('--manifest-sha256', $tester->getDisplay());
+    }
+
+    public function testManifestSha256MustMatchTheManifest(): void
+    {
+        $projectDir = $this->projectDirectory();
+        file_put_contents($projectDir . '/catalog.json', '{"schemaVersion":1}');
+        $tester = new CommandTester(new UpdateProjectCommand());
+        $options = ['directory' => $projectDir, '--manifest' => $projectDir . '/catalog.json', '--dry-run' => true,
+            '--no-remote-manifest' => true];
+
+        self::assertSame(2, $tester->execute([...$options, '--manifest-sha256' => str_repeat('0', 64)]));
+        self::assertStringContainsString('SHA-256', $tester->getDisplay());
+        $sha256 = hash('sha256', '{"schemaVersion":1}');
+        self::assertSame(0, $tester->execute([...$options, '--manifest-sha256' => $sha256]), $tester->getDisplay());
+    }
+
     public function testComposerUpdateWithNewCatalogRepositoryRequiresTrust(): void
     {
         $projectDir = $this->projectDirectory();

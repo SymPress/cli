@@ -209,6 +209,7 @@ Update options:
 - `--template-version=1.2.5`
 - `--manifest=./sympress-cli.json`
 - `--manifest-ref=<40-character-Git-SHA>`
+- `--manifest-sha256=<SHA-256 of the reviewed manifest file>`
 - `--no-remote-manifest`
 - `--allow-template-execution`
 - `--no-install`

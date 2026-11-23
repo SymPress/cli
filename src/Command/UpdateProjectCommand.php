@@ -59,6 +59,12 @@ final class UpdateProjectCommand extends Command
             )
             ->addOption('manifest-ref', null, InputOption::VALUE_REQUIRED, 'Immutable Git SHA for remote manifests.')
             ->addOption(
+                'manifest-sha256',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'SHA-256 of the reviewed manifest file; required to trust a remote JSON manifest.',
+            )
+            ->addOption(
                 'no-remote-manifest',
                 null,
                 InputOption::VALUE_NONE,
@@ -267,8 +273,21 @@ HELP);
         if ($source === null) {
             return null;
         }
+        $sha256 = $this->stringOption($input, 'manifest-sha256') ?? '';
+        // Same rule as project:create: a remote JSON file can change between --dry-run and the trusted run.
+        if (
+            $sha256 === ''
+            && (bool) $input->getOption('allow-template-execution')
+            && !(bool) $input->getOption('dry-run')
+            && $this->manifestLoader->isUnpinnedRemote($source)
+        ) {
+            throw new RuntimeException(
+                'Trusting a remote JSON manifest requires --manifest-sha256=<SHA-256 of the reviewed file>,'
+                . ' or pass a reviewed local copy with --manifest=./file.json.',
+            );
+        }
 
-        return $this->manifestLoader->loadRequired($source, $this->manifestRef($input));
+        return $this->manifestLoader->loadRequired($source, $this->manifestRef($input), $sha256);
     }
 
     /**
