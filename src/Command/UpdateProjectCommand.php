@@ -105,7 +105,7 @@ HELP);
         try {
             $projectDir = $this->projectDir($input, getcwd() ?: '.');
             $metadata = $this->metadataStore->read($projectDir);
-            [$templates, $profiles, $packages, $revision] = $this->catalogs($input, $metadata);
+            [$templates, $profiles, $packages, $revision] = $this->catalogs($input, $io, $metadata);
             $level = $this->level($input, $io);
             $targetType = $this->targetType($input, $io, $level, $metadata, $profiles);
             $targetTemplate = $this->targetTemplate($input, $level, $metadata);
@@ -164,7 +164,7 @@ HELP);
     /**
      * @return array{0: DefaultTemplateCatalog, 1: DefaultProfileCatalog, 2: DefaultPackageCatalog, 3: string|null}
      */
-    private function catalogs(InputInterface $input, ProjectMetadata $metadata): array
+    private function catalogs(InputInterface $input, SymfonyStyle $io, ProjectMetadata $metadata): array
     {
         $templates = new DefaultTemplateCatalog();
         if (!in_array($metadata->templateId, array_map(static fn ($t): string => $t->id, $templates->all()), true)) {
@@ -198,6 +198,20 @@ HELP);
         $changed = $selected->id !== $metadata->templateId;
         $repository = $this->stringOption($input, 'repository')
             ?? ($changed ? $selected->repositoryUrl : $metadata->templateRepositoryUrl);
+        // The checked-in metadata must not make Git open a local repository (and its config) from the project.
+        if (
+            $repository === $metadata->templateRepositoryUrl && $this->stringOption($input, 'repository') === null
+            && preg_match('#^(?:https://|ssh://|git@)#', $repository) !== 1
+        ) {
+            $io->note(sprintf(
+                'Skipped manifest discovery: the template repository "%s" in %s is not an https://, ssh:// or git@'
+                . ' URL. Pass --repository or --manifest to load a catalog.',
+                $repository,
+                ProjectMetadataStore::RELATIVE_PATH,
+            ));
+
+            return [$templates, $profiles, $packages, null];
+        }
         $version = $this->stringOption($input, 'template-version')
             ?? ($changed ? $selected->defaultVersion : $metadata->templateVersion);
         $revision = $repository === $metadata->templateRepositoryUrl && $version === $metadata->templateVersion
