@@ -69,6 +69,31 @@ final class AgentsDocsWriterTest extends TestCase
         self::assertSame("/.sympress-docs/\n", file_get_contents($this->projectDir . '/.gitignore'));
     }
 
+    public function testIndexFollowsLinksInsideButNotOutsideTheProject(): void
+    {
+        $writer = $this->writer();
+        $packages = $writer->lockedPackages($this->projectDir);
+        file_put_contents($this->projectDir . '/CLAUDE.md', "# Rules\n");
+        symlink('CLAUDE.md', $this->projectDir . '/AGENTS.md');
+
+        $writer->write($this->projectDir, $packages, 'AGENTS.md');
+        self::assertStringContainsString('docs:start', (string) file_get_contents($this->projectDir . '/CLAUDE.md'));
+
+        $outside = $this->projectDir . '-outside';
+        file_put_contents($outside, "secret\n");
+        unlink($this->projectDir . '/AGENTS.md');
+        symlink($outside, $this->projectDir . '/AGENTS.md');
+        try {
+            $writer->write($this->projectDir, $packages, 'AGENTS.md');
+            self::fail('Index written through a link out of the project.');
+        } catch (\RuntimeException $exception) {
+            self::assertStringContainsString('outside the project', $exception->getMessage());
+        } finally {
+            self::assertStringEqualsFile($outside, "secret\n");
+            unlink($outside);
+        }
+    }
+
     public function testCommandRejectsOtherIndexFilesAndListsPackagesOnDryRun(): void
     {
         $tester = new CommandTester(new AgentsDocsCommand($this->writer()));
