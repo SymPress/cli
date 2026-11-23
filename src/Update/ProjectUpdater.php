@@ -114,10 +114,11 @@ final readonly class ProjectUpdater
         // Repositories from template/manifest catalogs run code via composer update; built-in ones are trusted.
         $untrustedRepositories = array_diff($newRepositories, (new DefaultPackageCatalog())->repositoryUrls());
 
-        if ($runComposer && $missingPackages !== [] && $untrustedRepositories !== [] && !$allowTemplateExecution) {
+        // Also with --no-install: once in composer.json, the team's next composer update runs them.
+        if ($untrustedRepositories !== [] && !$allowTemplateExecution) {
             throw new RuntimeException(sprintf(
                 'The update adds Composer repositories from the template catalog: %s. Review them and pass'
-                . ' --allow-template-execution to run composer update, or --no-install to only patch composer.json.',
+                . ' --allow-template-execution to add them to composer.json.',
                 implode(', ', $untrustedRepositories),
             ));
         }

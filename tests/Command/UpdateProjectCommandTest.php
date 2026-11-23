@@ -107,16 +107,19 @@ final class UpdateProjectCommandTest extends TestCase
         self::assertSame(0, $tester->execute([...$options, '--dry-run' => true]));
         self::assertStringContainsString('https://example.test/acme/remote.git', $tester->getDisplay());
 
-        self::assertSame(2, $tester->execute($options));
-        self::assertStringContainsString('--allow-template-execution', $tester->getDisplay());
-        self::assertSame([], $runner->commands);
-        self::assertSame($composerJson, file_get_contents($projectDir . '/composer.json'));
+        foreach ([$options, [...$options, '--no-install' => true]] as $untrusted) {
+            self::assertSame(2, $tester->execute($untrusted));
+            self::assertStringContainsString('--allow-template-execution', $tester->getDisplay());
+            self::assertSame([], $runner->commands);
+            self::assertSame($composerJson, file_get_contents($projectDir . '/composer.json'));
+        }
 
         self::assertSame(0, $tester->execute([...$options, '--allow-template-execution' => true]));
         self::assertSame('update', $runner->commands[0][1] ?? null);
-        self::assertStringContainsString(
-            'example.test/acme/remote.git',
-            (string) file_get_contents($projectDir . '/composer.json'),
+        $repositories = json_decode((string) file_get_contents($projectDir . '/composer.json'), true)['repositories'];
+        self::assertContains(
+            ['type' => 'vcs', 'url' => 'https://example.test/acme/remote.git', 'only' => ['acme/remote']],
+            $repositories,
         );
 
         // Built-in catalog repositories (here sympress/nginx-cache) keep the documented flow.

@@ -218,9 +218,14 @@ final class ComposerJsonEditor
         }
 
         foreach ($urls as $url) {
+            // "only" keeps a catalog repository from serving any other package, e.g. sympress/*.
             $data['repositories'][] = [
                 'type' => 'vcs',
                 'url' => $url,
+                'only' => array_values(array_unique(array_map(
+                    static fn (PackageReference $package): string => $package->name,
+                    array_filter($packages, static fn (PackageReference $p): bool => $p->repositoryUrl === $url),
+                ))),
             ];
         }
     }
