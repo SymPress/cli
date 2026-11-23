@@ -47,68 +47,80 @@ final readonly class ProjectGenerator
         if (preg_match('/^[a-f0-9]{40}$/iD', $revision) !== 1) {
             throw new RuntimeException('The template revision must be an immutable Git SHA.');
         }
-        $this->filesystem->mkdir(dirname($configuration->directory));
-        $io->section('Create starter project at ' . $revision);
-        $exitCode = $this->commandRunner->run(
-            ['git',
-            '-c',
-            'core.hooksPath=/dev/null',
-            'clone',
-            '--no-checkout',
-            '--',
-            $repository,
-            $configuration->directory],
-            null,
-            $io
-        );
+        $createdDirectory = !file_exists($configuration->directory);
+        $materialized = false;
+        try {
+            $this->filesystem->mkdir(dirname($configuration->directory));
+            $io->section('Create starter project at ' . $revision);
+            $exitCode = $this->commandRunner->run(
+                ['git',
+                '-c',
+                'core.hooksPath=/dev/null',
+                'clone',
+                '--no-checkout',
+                '--',
+                $repository,
+                $configuration->directory],
+                null,
+                $io
+            );
 
-        if ($exitCode !== 0) {
-            return $exitCode;
-        }
-
-        // core.symlinks=false: template symlinks (e.g. .env -> ~/.bashrc) become plain files,
-        // so later .env/composer.json/.sympress writes cannot escape the project directory.
-        $exitCode = $this->commandRunner->run(
-            ['git',
-            '-c',
-            'core.hooksPath=/dev/null',
-            '-c',
-            'core.symlinks=false',
-            'checkout',
-            '--detach',
-            $revision],
-            $configuration->directory,
-            $io
-        );
-        if ($exitCode !== 0) {
-            return $exitCode;
-        }
-        $manifest = (new \SymPress\Cli\Repository\RepositoryManifestLoader())->load($configuration->directory);
-        $setupTemplate = $configuration->template;
-        foreach ($manifest->templates ?? [] as $candidate) {
-            if ($candidate->id !== $setupTemplate->id) {
-                continue;
+            if ($exitCode !== 0) {
+                return $exitCode;
             }
-            if (
-                $candidate->repositoryUrl !== $setupTemplate->repositoryUrl
-                || $candidate->packageName !== $setupTemplate->packageName
-            ) {
-                throw new RuntimeException('Snapshot manifest cannot redirect the selected template.');
-            }
-            $setupTemplate = $candidate->withVersion($configuration->templateVersion ?: $setupTemplate->defaultVersion);
-        }
-        $this->filesystem->remove($configuration->directory . '/.git');
-        $io->section('Apply initial configuration');
-        $composerChanged = $this->composerJsonEditor->apply($configuration->directory, $configuration);
-        if ($composerChanged) {
-            $this->filesystem->remove($configuration->directory . '/composer.lock');
-        }
 
-        $this->envFileEditor->apply($configuration->directory, $configuration);
-        $this->metadataStore->write(
-            $configuration->directory,
-            ProjectMetadata::fromConfiguration($configuration, $revision),
-        );
+            // core.symlinks=false: template symlinks (e.g. .env -> ~/.bashrc) become plain files,
+            // so later .env/composer.json/.sympress writes cannot escape the project directory.
+            $exitCode = $this->commandRunner->run(
+                ['git',
+                '-c',
+                'core.hooksPath=/dev/null',
+                '-c',
+                'core.symlinks=false',
+                'checkout',
+                '--detach',
+                $revision],
+                $configuration->directory,
+                $io
+            );
+            if ($exitCode !== 0) {
+                return $exitCode;
+            }
+            $manifest = (new \SymPress\Cli\Repository\RepositoryManifestLoader())->load($configuration->directory);
+            $setupTemplate = $configuration->template;
+            foreach ($manifest->templates ?? [] as $candidate) {
+                if ($candidate->id !== $setupTemplate->id) {
+                    continue;
+                }
+                if (
+                    $candidate->repositoryUrl !== $setupTemplate->repositoryUrl
+                    || $candidate->packageName !== $setupTemplate->packageName
+                ) {
+                    throw new RuntimeException('Snapshot manifest cannot redirect the selected template.');
+                }
+                $setupTemplate = $candidate->withVersion(
+                    $configuration->templateVersion ?: $setupTemplate->defaultVersion,
+                );
+            }
+            $this->filesystem->remove($configuration->directory . '/.git');
+            $io->section('Apply initial configuration');
+            $composerChanged = $this->composerJsonEditor->apply($configuration->directory, $configuration);
+            if ($composerChanged) {
+                $this->filesystem->remove($configuration->directory . '/composer.lock');
+            }
+
+            $this->envFileEditor->apply($configuration->directory, $configuration);
+            $this->metadataStore->write(
+                $configuration->directory,
+                ProjectMetadata::fromConfiguration($configuration, $revision),
+            );
+            $materialized = true;
+        } finally {
+            // A half-created project (possibly with .env credentials) would block the next attempt.
+            if (!$materialized) {
+                $this->discard($configuration->directory, $createdDirectory);
+            }
+        }
 
         if ($configuration->runSetup) {
             $io->section('Run starter setup');
@@ -198,6 +210,16 @@ final readonly class ProjectGenerator
             static fn (string $part): string => str_contains($part, ' ') ? escapeshellarg($part) : $part,
             $command,
         ));
+    }
+
+    private function discard(string $directory, bool $createdDirectory): void
+    {
+        if ($createdDirectory) {
+            $this->filesystem->remove($directory);
+        } elseif (is_dir($directory)) {
+            // The directory was verified empty, so emptying it restores the previous state.
+            $this->filesystem->remove(new \FilesystemIterator($directory));
+        }
     }
 
     private function assertTargetDirectoryIsAvailable(string $directory): void

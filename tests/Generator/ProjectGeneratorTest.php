@@ -7,11 +7,13 @@ namespace SymPress\Cli\Tests\Generator;
 use PHPUnit\Framework\TestCase;
 use SymPress\Cli\Catalog\DefaultProfileCatalog;
 use SymPress\Cli\Catalog\DefaultTemplateCatalog;
+use SymPress\Cli\Generator\CommandRunner;
 use SymPress\Cli\Generator\ProjectGenerator;
 use SymPress\Cli\Model\PackageReference;
 use SymPress\Cli\Model\ProjectConfiguration;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\BufferedOutput;
+use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Process\Process;
@@ -112,6 +114,38 @@ final class ProjectGeneratorTest extends TestCase
         self::assertSame(0, (new ProjectGenerator())->generate($configuration, $this->style()));
         self::assertFileDoesNotExist($victim);
         self::assertFalse(is_link($projectDir . '/.env'));
+    }
+
+    public function testFailedCreationRemovesTheHalfCreatedProject(): void
+    {
+        $runner = new class implements CommandRunner {
+            public function run(array $command, ?string $cwd, OutputInterface $output): int
+            {
+                if ($cwd === null) {
+                    $projectDir = $command[count($command) - 1];
+                    is_dir($projectDir) || mkdir($projectDir, 0777, true);
+                    file_put_contents($projectDir . '/composer.json', '{broken');
+                    file_put_contents($projectDir . '/.env', 'WP_ADMIN_PASSWORD=secret');
+                }
+
+                return 0;
+            }
+        };
+        $created = $this->temporaryProjectPath();
+        $existing = $this->temporaryProjectPath();
+        mkdir($existing);
+
+        foreach ([$created, $existing] as $directory) {
+            try {
+                (new ProjectGenerator($runner))->generate($this->configuration($directory), $this->style());
+                self::fail('Broken composer.json accepted.');
+            } catch (\RuntimeException $exception) {
+                self::assertStringContainsString('Unable to parse', $exception->getMessage());
+            }
+        }
+
+        self::assertFileDoesNotExist($created);
+        self::assertSame(['.', '..'], scandir($existing));
     }
 
     /** @return array<string, mixed> */
