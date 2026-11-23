@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.0 — 2026-11-23
+
+- Security: new projects default to Starter 1.2.5 instead of 1.1.8, so they include the Starter security fixes from 1.2.2 to 1.2.5. The default is pinned to the commit of tag `v1.2.5` (`b403cc0`); the run stops if the tag resolves to a different commit.
+- Security: `agents:md` and `project:update` refuse to write `AGENTS.md`/`CLAUDE.md`, `.gitignore`, `.sympress/project.json` or `composer.json` through a symlink that leaves the project directory. Links inside the project keep working.
+- Security: `agents:md` only writes package names and versions from `composer.lock` that match the Composer patterns; other versions are shown as the installed commit.
+- Security: catalog VCS repositories are written with `"only"` limited to their packages. `project:update` adds them only with `--allow-template-execution`, now also with `--no-install`.
+- Security: `project:update` accepts `--manifest-sha256` and requires it to trust a remote JSON `--manifest` outside `--dry-run`, like `project:create`.
+- Security: `project:update` no longer opens a local template repository recorded in `.sympress/project.json` with Git; discovery only uses `https://`, `ssh://` or `git@` URLs from the metadata.
+- Fix: `project:update` works for projects created from a manifest template that is not built in, also with `--no-remote-manifest`.
+- Fix: a failed `project:create` removes the half-created project (including `.env`) instead of blocking the next attempt.
+- Fix: the built-in catalog installs `sympress/mailer` and `sympress/nginx-cache` releases from Packagist instead of `dev-main` from VCS repositories.
+- CI: let Dependabot update GitHub Actions pins.
+
 ## 0.3.0 — 2026-11-16
 
 - Security: `project:create` with a remote JSON `--manifest` URL and setup enabled now requires `--manifest-sha256`, so the reviewed manifest (setup command, template repository, package repositories) cannot be swapped before the real run. Local manifest files are unaffected.

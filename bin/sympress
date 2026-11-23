@@ -47,7 +47,7 @@ if (!class_exists(CreateProjectCommand::class)) {
     });
 }
 
-$application = new Application('SymPress CLI', '0.3.0');
+$application = new Application('SymPress CLI', '0.4.0');
 $commands = [
     new CreateProjectCommand(),
     new UpdateProjectCommand(),
